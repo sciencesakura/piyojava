@@ -1,0 +1,4 @@
+*.class
+*.o
+/compile_commands.json
+/piyojava
