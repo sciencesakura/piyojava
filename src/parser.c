@@ -26,16 +26,6 @@ static void read_u4(u4 *ptr, FILE *strm)
   *ptr = (buf[0] << 8 * 3) | (buf[1] << 8 * 2) | (buf[2] << 8 * 1) | buf[3];
 }
 
-static void *cp(void **constant_pool, u2 index)
-{
-  return index == 0 ? NULL : constant_pool[index - 1];
-}
-
-static bool utf8_has(const CONSTANT_Utf8_info *utf8, const char *str)
-{
-  return utf8->length == strlen(str) && memcmp(utf8->bytes, str, utf8->length) == 0;
-}
-
 static void read_constant_pool(u2 count, void ***ptr, FILE *strm)
 {
   *ptr = calloc(count - 1, sizeof(void *));

@@ -14,8 +14,9 @@
 typedef uint8_t u1;
 typedef uint16_t u2;
 typedef uint32_t u4;
-typedef struct ClassFile ClassFile;
 typedef enum Constant_tag Constant_tag;
+typedef enum Opcode Opcode;
+typedef struct ClassFile ClassFile;
 typedef struct Cp_info Cp_info;
 typedef struct CONSTANT_Utf8_info CONSTANT_Utf8_info;
 // typedef struct CONSTANT_Integer_info CONSTANT_Integer_info;
@@ -36,6 +37,28 @@ typedef struct Method_info Method_info;
 typedef struct Attribute_info Attribute_info;
 typedef struct Code_attribute Code_attribute;
 typedef struct Exception_table Exception_table;
+typedef struct Frame Frame;
+
+enum Constant_tag {
+  CONSTANT_Utf8 = 1,
+  CONSTANT_Integer = 3,
+  CONSTANT_Float = 4,
+  CONSTANT_Long = 5,
+  CONSTANT_Double = 6,
+  CONSTANT_Class = 7,
+  CONSTANT_String = 8,
+  CONSTANT_Fieldref = 9,
+  CONSTANT_Methodref = 10,
+  CONSTANT_InterfaceMethodref = 11,
+  CONSTANT_NameAndType = 12,
+  CONSTANT_MethodHandle = 15,
+  CONSTANT_MethodType = 16,
+  CONSTANT_InvokeDynamic = 18,
+};
+
+enum Opcode {
+  OPCODE_return = 0xb1,
+};
 
 struct ClassFile {
   u4 magic;
@@ -54,23 +77,6 @@ struct ClassFile {
   Method_info *methods;
   u2 attributes_count;
   void **attributes;
-};
-
-enum Constant_tag {
-  CONSTANT_Utf8 = 1,
-  CONSTANT_Integer = 3,
-  CONSTANT_Float = 4,
-  CONSTANT_Long = 5,
-  CONSTANT_Double = 6,
-  CONSTANT_Class = 7,
-  CONSTANT_String = 8,
-  CONSTANT_Fieldref = 9,
-  CONSTANT_Methodref = 10,
-  CONSTANT_InterfaceMethodref = 11,
-  CONSTANT_NameAndType = 12,
-  CONSTANT_MethodHandle = 15,
-  CONSTANT_MethodType = 16,
-  CONSTANT_InvokeDynamic = 18,
 };
 
 struct Cp_info {
@@ -145,8 +151,24 @@ struct Exception_table {
   CONSTANT_Class_info *catch_type;
 };
 
+struct Frame {
+  Code_attribute *code;
+  void **constant_pool;
+};
+
+#define ME_ACC_STATIC 0x0008
+
+void debug(const wchar_t *message, ...);
+
 noreturn void error(const wchar_t *message, ...);
 
 ClassFile *parse_class(const char *classname);
 
+void *cp(void **constant_pool, u2 index);
+
+bool utf8_has(const CONSTANT_Utf8_info *utf8, const char *str);
+
+Method_info *find_method(const ClassFile *cf, u2 access_flag, const char *name, const char *descriptor);
+
+void *find_attribute(u2 attributes_count, void **attributes, const char *name);
 #endif
