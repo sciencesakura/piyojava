@@ -87,34 +87,22 @@ void log_classfile(ClassFile *cf)
   wprintf(L"attributes=...\n");
 }
 
-static void execute(Frame *frame)
-{
-  u4 pc = 0;
-  while (pc < frame->code->code_length) {
-    Opcode opcode = frame->code->code[pc++];
-    debug(L"pc=%" PRIu32 ", opcode=0x%02x", pc - 1, opcode);
-    switch (opcode) {
-    case OPCODE_return:
-      return;
-    default:
-      error(L"unknown instruction(pc=%" PRIu32 ", opcode=0x%02x)", pc - 1, opcode);
-    }
-  }
-}
-
 int main(int argc, char **argv)
 {
   if (argc < 2) {
     error(L"piyojava <classfile>");
   }
   ClassFile *cf = parse_class(argv[1]);
-  log_classfile(cf);
+  // log_classfile(cf);
   Method_info *main = find_method(cf, ME_ACC_STATIC, "main", "([Ljava/lang/String;)V");
-  Frame *frame = &(Frame) {
-    find_attribute(main->attributes_count, main->attributes, "Code"),
-    cf->constant_pool
-  };
+  Code_attribute *code = code_attr(main);
+  intptr_t variables[code->max_locals];
+  intptr_t operands[code->max_stack];
+  Frame *frame = &(Frame) { 0, code, variables, operands, cf->constant_pool };
   execute(frame);
+  for (u2 i = 0; i < code->max_locals; i++) {
+    debug(L"locals[%" PRIu16 "]=%" PRIdPTR, i, variables[i]);
+  }
   return EXIT_SUCCESS;
 }
 

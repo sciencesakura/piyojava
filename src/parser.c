@@ -42,6 +42,15 @@ static void read_constant_pool(u2 count, void ***ptr, FILE *strm)
       read_bytes(c->bytes, c->length, strm);
       break;
     }
+    case CONSTANT_Integer: {
+      CONSTANT_Integer_info *c = malloc(sizeof(CONSTANT_Integer_info));
+      (*ptr)[i] = c;
+      c->tag = tag;
+      u4 bytes;
+      read_u4(&bytes, strm);
+      c->value = (int32_t)bytes; // TODO check endian
+      break;
+    }
     case CONSTANT_Class: {
       CONSTANT_Class_info *c = malloc(sizeof(CONSTANT_Class_info));
       (*ptr)[i] = c;
@@ -101,11 +110,12 @@ static void read_interfaces(u2 count, CONSTANT_Class_info ***ptr, FILE *strm)
     *ptr = NULL;
     return;
   }
-  //TODO
+  // TODO
   error(L"interface is unsupported");
 }
 
-static void read_code_attribute(void **ptr, CONSTANT_Utf8_info *attribute_name, void **constant_pool, FILE *strm)
+static void read_code_attribute(void **ptr, CONSTANT_Utf8_info *attribute_name,
+                                void **constant_pool, FILE *strm)
 {
   Code_attribute *attr = malloc(sizeof(Code_attribute));
   *ptr = attr;
@@ -158,7 +168,7 @@ static void read_fields(u2 count, Field_info **ptr, void **constant_pool, FILE *
     *ptr = NULL;
     return;
   }
-  //TODO
+  // TODO
   error(L"field is unsupported");
 }
 

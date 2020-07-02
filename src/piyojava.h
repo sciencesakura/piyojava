@@ -11,15 +11,15 @@
 #include <string.h>
 #include <wchar.h>
 
+typedef int32_t jint;
 typedef uint8_t u1;
 typedef uint16_t u2;
 typedef uint32_t u4;
 typedef enum Constant_tag Constant_tag;
-typedef enum Opcode Opcode;
 typedef struct ClassFile ClassFile;
 typedef struct Cp_info Cp_info;
 typedef struct CONSTANT_Utf8_info CONSTANT_Utf8_info;
-// typedef struct CONSTANT_Integer_info CONSTANT_Integer_info;
+typedef struct CONSTANT_Integer_info CONSTANT_Integer_info;
 // typedef struct CONSTANT_Float_info CONSTANT_Float_info;
 // typedef struct CONSTANT_Long_info CONSTANT_Long_info;
 // typedef struct CONSTANT_Double_info CONSTANT_Double_info;
@@ -56,10 +56,6 @@ enum Constant_tag {
   CONSTANT_InvokeDynamic = 18,
 };
 
-enum Opcode {
-  OPCODE_return = 0xb1,
-};
-
 struct ClassFile {
   u4 magic;
   u2 minor_version;
@@ -87,6 +83,11 @@ struct CONSTANT_Utf8_info {
   Constant_tag tag;
   u2 length;
   u1 *bytes;
+};
+
+struct CONSTANT_Integer_info {
+  Constant_tag tag;
+  jint value;
 };
 
 struct CONSTANT_Class_info {
@@ -152,7 +153,10 @@ struct Exception_table {
 };
 
 struct Frame {
+  u4 pc;
   Code_attribute *code;
+  intptr_t *variables;
+  intptr_t *operands;
   void **constant_pool;
 };
 
@@ -170,5 +174,8 @@ bool utf8_has(const CONSTANT_Utf8_info *utf8, const char *str);
 
 Method_info *find_method(const ClassFile *cf, u2 access_flag, const char *name, const char *descriptor);
 
-void *find_attribute(u2 attributes_count, void **attributes, const char *name);
+Code_attribute *code_attr(const Method_info *method);
+
+void execute(Frame *frame);
+
 #endif
