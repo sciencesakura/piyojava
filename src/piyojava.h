@@ -126,6 +126,7 @@ struct Method_info {
   CONSTANT_Utf8_info *descriptor;
   u2 attributes_count;
   void **attributes;
+  u1 args_size;
 };
 
 struct Attribute_info {
@@ -166,7 +167,7 @@ void debug(const wchar_t *message, ...);
 
 noreturn void error(const wchar_t *message, ...);
 
-ClassFile *parse_class(const char *classname);
+ClassFile *parse_class(size_t length, const void *name);
 
 void *cp(void **constant_pool, u2 index);
 

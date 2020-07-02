@@ -12,7 +12,7 @@ piyojava: $(OBJS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 check: piyojava Test.class
-	./piyojava Test.class
+	./piyojava Test
 
 clean:
 	$(RM) piyojava $(OBJS)

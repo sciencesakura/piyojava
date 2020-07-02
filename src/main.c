@@ -101,7 +101,7 @@ int main(int argc, char **argv)
   if (argc < 2) {
     error(L"piyojava <classfile>");
   }
-  ClassFile *cf = parse_class(argv[1]);
+  ClassFile *cf = parse_class(strlen(argv[1]), argv[1]);
   // log_classfile(cf);
   intptr_t _vmstack[1024]; // サイズ適当
   intptr_t *vmstack = _vmstack;

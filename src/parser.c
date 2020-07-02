@@ -190,14 +190,41 @@ static void read_methods(u2 count, Method_info **ptr, void **constant_pool, FILE
     u2 descriptor_index;
     read_u2(&descriptor_index, strm);
     me->descriptor = cp(constant_pool, descriptor_index);
+    me->args_size = 0;
+    for (u1 *dp = me->descriptor->bytes; *dp != ')'; dp++) {
+      while (*dp == '[')
+        dp++;
+      switch (*dp) {
+      case 'B':
+      case 'C':
+      case 'D':
+      case 'F':
+      case 'I':
+      case 'J':
+      case 'S':
+      case 'Z':
+        me->args_size++;
+        break;
+      case 'L':
+        me->args_size++;
+        while (*(++dp) != ';') { }
+        break;
+      }
+    }
     read_u2(&me->attributes_count, strm);
     read_attributes(me->attributes_count, &me->attributes, constant_pool, strm);
   }
 }
 
-ClassFile *parse_class(const char *classname)
+ClassFile *parse_class(size_t length, const void *name)
 {
+  char classname[66365];
+  memcpy(classname, name, length);
+  memcpy(classname + length, ".class", 7);
   FILE *strm = fopen(classname, "rb");
+  if (strm == NULL) {
+    error(L"failed to open %s", classname);
+  }
   ClassFile *cf = malloc(sizeof(ClassFile));
   read_u4(&cf->magic, strm);
   read_u2(&cf->minor_version, strm);
@@ -219,5 +246,6 @@ ClassFile *parse_class(const char *classname)
   read_methods(cf->methods_count, &cf->methods, cf->constant_pool, strm);
   read_u2(&cf->attributes_count, strm);
   read_attributes(cf->attributes_count, &cf->attributes, cf->constant_pool, strm);
+  fclose(strm);
   return cf;
 }

@@ -31,7 +31,9 @@ enum Opcode {
   OPCODE_irem = 0x70,
   OPCODE_ineg = 0x74,
   OPCODE_iinc = 0x84,
+  OPCODE_ireturn = 0xac,
   OPCODE_return = 0xb1,
+  OPCODE_invokestatic = 0xb8,
 };
 
 #define APPEND_8BIT(a, b) (((a) << 8) | (b))
@@ -149,6 +151,36 @@ static void _iinc(Frame *frame)
   frame->variables[index] = value + (int8_t)nextcode(frame);
 }
 
+static void _ireturn(const intptr_t *vmstack)
+{
+  Frame *frame = stack_peek(vmstack);
+  Frame *invoker = stack_peek(vmstack, 1);
+  stack_push(&invoker->operands, stack_pop(&frame->operands));
+}
+
+static void _invokestatic(intptr_t *vmstack)
+{
+  Frame *frame = stack_peek(vmstack);
+  u2 indexbyte1 = nextcode(frame);
+  u2 indexbyte2 = nextcode(frame);
+  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  CONSTANT_Methodref_info *mref = cp(frame->constant_pool, index);
+  ClassFile *cf = parse_class(mref->class->name->length, mref->class->name->bytes);
+  Method_info *me = find_method(cf, mref->name_and_type);
+  if (!(me->access_flags & ME_ACC_STATIC)) {
+    error(L"method must be static - invokestatic(pc=%" PRIu32 ")", frame->pc);
+  }
+  Code_attribute *code = code_attr(me);
+  intptr_t variables[code->max_locals];
+  for (u1 i = me->args_size; i != 0; i--) {
+    variables[i - 1] = stack_ipop(&frame->operands);
+  }
+  intptr_t operands[code->max_stack];
+  stack_push(&vmstack, &(Frame) { 0, code, variables, operands, cf->constant_pool });
+  execute(vmstack);
+  stack_pop(&vmstack);
+}
+
 void execute(intptr_t *vmstack)
 {
   Frame *frame = stack_peek(vmstack);
@@ -239,8 +271,14 @@ void execute(intptr_t *vmstack)
     case OPCODE_iinc:
       _iinc(frame);
       break;
+    case OPCODE_ireturn:
+      _ireturn(vmstack);
+      return;
     case OPCODE_return:
       return;
+    case OPCODE_invokestatic:
+      _invokestatic(vmstack);
+      break;
     default:
       error(L"unknown instruction(pc=%" PRIu32 ", opcode=0x%02x)", frame->pc - 1, opcode);
     }
