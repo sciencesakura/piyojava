@@ -6,5 +6,10 @@ public class Test {
         int c = 65536;
         int d = 0;
         int e = -42;
+        a = a + b - c;
+        b++;
+        c = c / 71;
+        d = e * 3;
+        e = -d;
     }
 }

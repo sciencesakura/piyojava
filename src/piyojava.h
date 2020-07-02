@@ -170,12 +170,12 @@ ClassFile *parse_class(const char *classname);
 
 void *cp(void **constant_pool, u2 index);
 
-bool utf8_has(const CONSTANT_Utf8_info *utf8, const char *str);
+bool utf8eq(const CONSTANT_Utf8_info *a, const CONSTANT_Utf8_info *b);
 
-Method_info *find_method(const ClassFile *cf, u2 access_flag, const char *name, const char *descriptor);
+Method_info *find_method(const ClassFile *cf, const CONSTANT_NameAndType_info *nat);
 
 Code_attribute *code_attr(const Method_info *method);
 
-void execute(Frame *frame);
+void execute(intptr_t *vmstack);
 
 #endif

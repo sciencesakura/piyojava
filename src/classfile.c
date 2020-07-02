@@ -5,21 +5,19 @@ void *cp(void **constant_pool, u2 index)
   return index == 0 ? NULL : constant_pool[index - 1];
 }
 
-bool utf8_has(const CONSTANT_Utf8_info *utf8, const char *str)
+bool utf8eq(const CONSTANT_Utf8_info *a, const CONSTANT_Utf8_info *b)
 {
-  return utf8->length == strlen(str) && memcmp(utf8->bytes, str, utf8->length) == 0;
+  return a == b || (a->length == b->length && memcmp(a->bytes, b->bytes, a->length) == 0);
 }
 
-Method_info *find_method(const ClassFile *cf, u2 access_flag, const char *name,
-                         const char *descriptor)
+Method_info *find_method(const ClassFile *cf, const CONSTANT_NameAndType_info *nat)
 {
   for (u2 i = 0; i < cf->methods_count; i++) {
     Method_info *me = &cf->methods[i];
-    if (me->access_flags & access_flag && utf8_has(me->name, name)
-        && utf8_has(me->descriptor, descriptor))
+    if (utf8eq(me->name, nat->name) && utf8eq(me->descriptor, nat->descriptor))
       return me;
   }
-  error(L"method(%s:%s) was not found", name, descriptor);
+  error(L"method was not found");
 }
 
 static void *find_attribute(u2 attributes_count, void **attributes, size_t namelen,

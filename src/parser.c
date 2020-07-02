@@ -1,5 +1,7 @@
 #include "piyojava.h"
 
+const CONSTANT_Utf8_info *Code = &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 4, (u1[]) { "Code" } };
+
 static void read_attributes(u2 count, void ***ptr, void **constant_pool, FILE *strm);
 
 static void read_bytes(void *ptr, size_t size, FILE *strm)
@@ -154,7 +156,7 @@ static void read_attributes(u2 count, void ***ptr, void **constant_pool, FILE *s
     u2 attribute_name_index;
     read_u2(&attribute_name_index, strm);
     CONSTANT_Utf8_info *attribute_name = cp(constant_pool, attribute_name_index);
-    if (utf8_has(attribute_name, "Code")) {
+    if (utf8eq(attribute_name, Code)) {
       read_code_attribute(&(*ptr)[i], attribute_name, constant_pool, strm);
     } else {
       error(L"attributes[%" PRIu16 "] is unknown", i);

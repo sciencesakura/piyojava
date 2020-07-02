@@ -1,4 +1,5 @@
 #include "piyojava.h"
+#include "util/stack.h"
 
 void print_utf8(const CONSTANT_Utf8_info *utf8)
 {
@@ -87,6 +88,14 @@ void log_classfile(ClassFile *cf)
   wprintf(L"attributes=...\n");
 }
 
+const CONSTANT_NameAndType_info *MAIN_NAT = &(CONSTANT_NameAndType_info) {
+  CONSTANT_NameAndType,
+  0,
+  &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 4, (u1[]) { "main" } },
+  0,
+  &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 22, (u1[]) { "([Ljava/lang/String;)V" } }
+};
+
 int main(int argc, char **argv)
 {
   if (argc < 2) {
@@ -94,12 +103,17 @@ int main(int argc, char **argv)
   }
   ClassFile *cf = parse_class(argv[1]);
   // log_classfile(cf);
-  Method_info *main = find_method(cf, ME_ACC_STATIC, "main", "([Ljava/lang/String;)V");
+  intptr_t _vmstack[1024]; // サイズ適当
+  intptr_t *vmstack = _vmstack;
+  Method_info *main = find_method(cf, MAIN_NAT);
+  if (!(main->access_flags & ME_ACC_STATIC)) {
+    error(L"not found");
+  }
   Code_attribute *code = code_attr(main);
   intptr_t variables[code->max_locals];
   intptr_t operands[code->max_stack];
-  Frame *frame = &(Frame) { 0, code, variables, operands, cf->constant_pool };
-  execute(frame);
+  stack_push(&vmstack, &(Frame) { 0, code, variables, operands, cf->constant_pool });
+  execute(vmstack);
   for (u2 i = 0; i < code->max_locals; i++) {
     debug(L"locals[%" PRIu16 "]=%" PRIdPTR, i, variables[i]);
   }
