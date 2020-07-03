@@ -5,9 +5,21 @@ void *cp(void **constant_pool, u2 index)
   return index == 0 ? NULL : constant_pool[index - 1];
 }
 
-bool utf8eq(const CONSTANT_Utf8_info *a, const CONSTANT_Utf8_info *b)
+size_t utf8hash(const void *utf8)
 {
-  return a == b || (a->length == b->length && memcmp(a->bytes, b->bytes, a->length) == 0);
+  CONSTANT_Utf8_info *u = (CONSTANT_Utf8_info *)utf8;
+  size_t hv = 0;
+  for (u2 i = 0; i < u->length; i++) {
+    hv = 31 * hv + *(u->bytes + i);
+  }
+  return hv;
+}
+
+bool utf8eq(const void *a, const void *b)
+{
+  CONSTANT_Utf8_info *ua = (CONSTANT_Utf8_info *)a;
+  CONSTANT_Utf8_info *ub = (CONSTANT_Utf8_info *)b;
+  return ua == ub || (ua->length == ub->length && memcmp(ua->bytes, ub->bytes, ua->length) == 0);
 }
 
 Field_info *find_field(const ClassFile *cf, const CONSTANT_NameAndType_info *nat)

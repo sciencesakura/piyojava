@@ -11,7 +11,7 @@ JCLAS := $(JSRCS:.java=.class)
 piyojava: $(OBJS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-check: piyojava Test.class
+check: piyojava $(JCLAS)
 	./piyojava Test
 
 clean:

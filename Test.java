@@ -28,5 +28,6 @@ public class Test {
         e = -d;
         Test.a = a;
         b = Test.a;
+        Test g = new Test();
     }
 }

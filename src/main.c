@@ -98,21 +98,6 @@ const CONSTANT_NameAndType_info *MAIN_NAT = &(CONSTANT_NameAndType_info) {
 
 HashTable classes;
 
-static size_t hash_classname(const void *classname)
-{
-  CONSTANT_Utf8_info *cn = (CONSTANT_Utf8_info *)classname;
-  size_t hv = 0;
-  for (u2 i = 0; i < cn->length; i++) {
-    hv = 31 * hv + *(cn->bytes + i);
-  }
-  return hv;
-}
-
-static bool p_utf8eq(const void *a, const void *b)
-{
-  return utf8eq((CONSTANT_Utf8_info *)a, (CONSTANT_Utf8_info *)b);
-}
-
 int main(int argc, char **argv)
 {
   if (argc < 2) {
@@ -120,7 +105,7 @@ int main(int argc, char **argv)
   }
   intptr_t _vmstack[1024]; // サイズ適当
   intptr_t *vmstack = _vmstack;
-  hashtable_init(&classes, 128, hash_classname, p_utf8eq);
+  hashtable_init(&classes, 128, utf8hash, utf8eq);
   ClassFile *cf = load_class(
       vmstack, &(CONSTANT_Utf8_info) { CONSTANT_Utf8, strlen(argv[1]), (u1 *)argv[1] });
   Method_info *main = find_method(cf, MAIN_NAT);

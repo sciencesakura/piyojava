@@ -6,7 +6,7 @@
 typedef struct HTBucket HTBucket;
 struct HTBucket {
   void *key;
-  void *value;
+  intptr_t value;
 };
 
 static bool match(const void *bucket, va_list *args)
@@ -31,18 +31,28 @@ void hashtable_init(HashTable *hashtable, size_t capacity, size_t (*hash)(const 
   hashtable->matcher = matcher;
 }
 
-void *hashtable_get(const HashTable *hashtable, const void *key)
+intptr_t hashtable_iget(const HashTable *hashtable, const void *key)
 {
   size_t index = hashtable->hash(key) % hashtable->capacity;
   HTBucket *bucket = list_find(&hashtable->table[index], match, hashtable, key);
-  return bucket == NULL ? NULL : bucket->value;
+  return bucket == NULL ? (intptr_t)NULL : bucket->value;
 }
 
-void hashtable_put(HashTable *hashtable, void *key, void *value)
+void hashtable_iput(HashTable *hashtable, void *key, intptr_t value)
 {
   size_t index = hashtable->hash(key) % hashtable->capacity;
   HTBucket *bucket = malloc(sizeof(HTBucket));
   bucket->key = key;
   bucket->value = value;
   list_add(&hashtable->table[index], bucket);
+}
+
+void *hashtable_get(const HashTable *hashtable, const void *key)
+{
+  return (void *)hashtable_iget(hashtable, key);
+}
+
+void hashtable_put(HashTable *hashtable, void *key, void *value)
+{
+  hashtable_iput(hashtable, key, (intptr_t)value);
 }

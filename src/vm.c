@@ -3,6 +3,8 @@
 #include "util/stack.h"
 
 typedef enum Opcode Opcode;
+typedef struct JObject JObject;
+
 enum Opcode {
   OPCODE_nop = 0x00,
   OPCODE_iconst_m1 = 0x02,
@@ -16,15 +18,28 @@ enum Opcode {
   OPCODE_sipush = 0x11,
   OPCODE_ldc = 0x12,
   OPCODE_iload = 0x15,
+  OPCODE_aload = 0x19,
   OPCODE_iload_0 = 0x1a,
   OPCODE_iload_1 = 0x1b,
   OPCODE_iload_2 = 0x1c,
   OPCODE_iload_3 = 0x1d,
+  OPCODE_aload_0 = 0x2a,
+  OPCODE_aload_1 = 0x2b,
+  OPCODE_aload_2 = 0x2c,
+  OPCODE_aload_3 = 0x2d,
   OPCODE_istore = 0x36,
+  OPCODE_astore = 0x3a,
   OPCODE_istore_0 = 0x3b,
   OPCODE_istore_1 = 0x3c,
   OPCODE_istore_2 = 0x3d,
   OPCODE_istore_3 = 0x3e,
+  OPCODE_astore_0 = 0x4b,
+  OPCODE_astore_1 = 0x4c,
+  OPCODE_astore_2 = 0x4d,
+  OPCODE_astore_3 = 0x4e,
+  OPCODE_dup = 0x59,
+  OPCODE_dup_x1 = 0x5a,
+  OPCODE_dup_x2 = 0x5b,
   OPCODE_iadd = 0x60,
   OPCODE_isub = 0x64,
   OPCODE_imul = 0x68,
@@ -36,7 +51,13 @@ enum Opcode {
   OPCODE_return = 0xb1,
   OPCODE_getstatic = 0xb2,
   OPCODE_putstatic = 0xb3,
+  OPCODE_invokespecial = 0xb7,
   OPCODE_invokestatic = 0xb8,
+  OPCODE_new = 0xbb,
+};
+
+struct JObject {
+  HashTable fields;
 };
 
 const CONSTANT_NameAndType_info *CLINIT_NAT
@@ -97,14 +118,59 @@ static void _iload(Frame *frame)
   _iload_n(frame, nextcode(frame));
 }
 
-static void _istore_n(Frame *frame, u1 index)
+static void _aload_n(Frame *frame, u1 n)
 {
-  frame->variables[index] = stack_ipop(&frame->operands);
+  stack_ipush(&frame->operands, frame->variables[n]);
+}
+
+static void _aload(Frame *frame)
+{
+  _aload_n(frame, nextcode(frame));
+}
+
+static void _istore_n(Frame *frame, u1 n)
+{
+  frame->variables[n] = stack_ipop(&frame->operands);
 }
 
 static void _istore(Frame *frame)
 {
   _istore_n(frame, nextcode(frame));
+}
+
+static void _astore_n(Frame *frame, u1 n)
+{
+  frame->variables[n] = stack_ipop(&frame->operands);
+}
+
+static void _astore(Frame *frame)
+{
+  _astore_n(frame, nextcode(frame));
+}
+
+static void _dup(Frame *frame)
+{
+  stack_ipush(&frame->operands, stack_ipeek(frame->operands));
+}
+
+static void _dup_x1(Frame *frame)
+{
+  intptr_t value1 = stack_ipop(&frame->operands);
+  intptr_t value2 = stack_ipop(&frame->operands);
+  stack_ipush(&frame->operands, value1);
+  stack_ipush(&frame->operands, value2);
+  stack_ipush(&frame->operands, value1);
+}
+
+static void _dup_x2(Frame *frame)
+{
+  intptr_t value1 = stack_ipop(&frame->operands);
+  intptr_t value2 = stack_ipop(&frame->operands);
+  intptr_t value3 = stack_ipop(&frame->operands);
+  stack_ipush(&frame->operands, value1);
+  stack_ipush(&frame->operands, value3);
+  stack_ipush(&frame->operands, value2);
+  stack_ipush(&frame->operands, value1);
 }
 
 static void _iadd(Frame *frame)
@@ -192,6 +258,27 @@ static void _putstatic(intptr_t *vmstack)
   fi->staticval = stack_ipop(&frame->operands);
 }
 
+static void _invokespecial(intptr_t *vmstack)
+{
+  Frame *frame = stack_peek(vmstack);
+  u2 indexbyte1 = nextcode(frame);
+  u2 indexbyte2 = nextcode(frame);
+  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  CONSTANT_Methodref_info *mref = cp(frame->constant_pool, index);
+  ClassFile *cf = load_class(vmstack, mref->class->name);
+  Method_info *me = find_method(cf, mref->name_and_type);
+  Code_attribute *code = code_attr(me);
+  intptr_t variables[code->max_locals];
+  for (u1 i = me->args_size; i != 0; i--) {
+    variables[i] = stack_ipop(&frame->operands);
+  }
+  variables[0] = stack_ipop(&frame->operands);
+  intptr_t operands[code->max_stack];
+  stack_push(&vmstack, &(Frame) { 0, code, variables, operands, cf->constant_pool });
+  execute(vmstack);
+  stack_pop(&vmstack);
+}
+
 static void _invokestatic(intptr_t *vmstack)
 {
   Frame *frame = stack_peek(vmstack);
@@ -213,6 +300,39 @@ static void _invokestatic(intptr_t *vmstack)
   stack_push(&vmstack, &(Frame) { 0, code, variables, operands, cf->constant_pool });
   execute(vmstack);
   stack_pop(&vmstack);
+}
+
+static void _new(intptr_t *vmstack)
+{
+  Frame *frame = stack_peek(vmstack);
+  u2 indexbyte1 = nextcode(frame);
+  u2 indexbyte2 = nextcode(frame);
+  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  CONSTANT_Class_info *cinf = cp(frame->constant_pool, index);
+  ClassFile *cf = load_class(vmstack, cinf->name);
+  JObject *obj = malloc(sizeof(JObject));
+  hashtable_init(&obj->fields, cf->fields_count * 2, utf8hash, utf8eq);
+  for (u2 i = 0; i < cf->fields_count; i++) {
+    Field_info *fi = &cf->fields[i];
+    if (fi->access_flags & FI_ACC_STATIC)
+      continue;
+    switch (*fi->descriptor->bytes) {
+    case 'B':
+    case 'C':
+    case 'I':
+    case 'J':
+    case 'S':
+    case 'Z':
+      hashtable_iput(&obj->fields, fi->name, 0);
+      break;
+    case 'D':
+    case 'F':
+      error(L"floating point number is unsupported");
+    default:
+      hashtable_put(&obj->fields, fi->name, NULL);
+    }
+  }
+  stack_push(&frame->operands, obj);
 }
 
 void execute(intptr_t *vmstack)
@@ -257,6 +377,9 @@ void execute(intptr_t *vmstack)
     case OPCODE_iload:
       _iload(frame);
       break;
+    case OPCODE_aload:
+      _aload(frame);
+      break;
     case OPCODE_iload_0:
       _iload_n(frame, 0);
       break;
@@ -269,8 +392,23 @@ void execute(intptr_t *vmstack)
     case OPCODE_iload_3:
       _iload_n(frame, 3);
       break;
+    case OPCODE_aload_0:
+      _aload_n(frame, 0);
+      break;
+    case OPCODE_aload_1:
+      _aload_n(frame, 1);
+      break;
+    case OPCODE_aload_2:
+      _aload_n(frame, 2);
+      break;
+    case OPCODE_aload_3:
+      _aload_n(frame, 3);
+      break;
     case OPCODE_istore:
       _istore(frame);
+      break;
+    case OPCODE_astore:
+      _astore(frame);
       break;
     case OPCODE_istore_0:
       _istore_n(frame, 0);
@@ -283,6 +421,27 @@ void execute(intptr_t *vmstack)
       break;
     case OPCODE_istore_3:
       _istore_n(frame, 3);
+      break;
+    case OPCODE_astore_0:
+      _astore_n(frame, 0);
+      break;
+    case OPCODE_astore_1:
+      _astore_n(frame, 1);
+      break;
+    case OPCODE_astore_2:
+      _astore_n(frame, 2);
+      break;
+    case OPCODE_astore_3:
+      _astore_n(frame, 3);
+      break;
+    case OPCODE_dup:
+      _dup(frame);
+      break;
+    case OPCODE_dup_x1:
+      _dup_x1(frame);
+      break;
+    case OPCODE_dup_x2:
+      _dup_x2(frame);
       break;
     case OPCODE_iadd:
       _iadd(frame);
@@ -319,6 +478,12 @@ void execute(intptr_t *vmstack)
     case OPCODE_invokestatic:
       _invokestatic(vmstack);
       break;
+    case OPCODE_invokespecial:
+      _invokespecial(vmstack);
+      break;
+    case OPCODE_new:
+      _new(vmstack);
+      break;
     default:
       error(L"unknown instruction(pc=%" PRIu32 ", opcode=0x%02x)", frame->pc - 1, opcode);
     }
@@ -332,6 +497,27 @@ ClassFile *load_class(intptr_t *vmstack, CONSTANT_Utf8_info *name)
     return cf;
   cf = parse_class(name->length, name->bytes);
   hashtable_put(&classes, name, cf);
+  for (u2 i = 0; i < cf->fields_count; i++) {
+    Field_info *fi = &cf->fields[i];
+    if (!(fi->access_flags & FI_ACC_STATIC))
+      continue;
+    switch (*fi->descriptor->bytes) {
+    case 'B':
+    case 'C':
+    case 'I':
+    case 'J':
+    case 'S':
+    case 'Z':
+      fi->staticval = 0;
+      break;
+    case 'D':
+    case 'F':
+      error(L"floating point number is unsupported");
+    default:
+      fi->staticval = (intptr_t)NULL;
+      break;
+    }
+  }
   Method_info *clinit = find_method(cf, CLINIT_NAT);
   if (clinit == NULL || !(clinit->access_flags & ME_ACC_STATIC))
     return cf;

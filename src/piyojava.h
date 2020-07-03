@@ -171,6 +171,7 @@ struct Frame {
   void **constant_pool;
 };
 
+#define FI_ACC_STATIC 0x0008
 #define ME_ACC_STATIC 0x0008
 
 extern HashTable classes;
@@ -185,7 +186,9 @@ ClassFile *parse_class(size_t length, const void *name);
 
 void *cp(void **constant_pool, u2 index);
 
-bool utf8eq(const CONSTANT_Utf8_info *a, const CONSTANT_Utf8_info *b);
+size_t utf8hash(const void *utf8);
+
+bool utf8eq(const void *a, const void *b);
 
 Field_info *find_field(const ClassFile *cf, const CONSTANT_NameAndType_info *nat);
 

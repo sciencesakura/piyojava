@@ -16,6 +16,10 @@ struct HashTable {
 void hashtable_init(HashTable *hashtable, size_t capacity, size_t (*hash)(const void *),
                     bool (*matcher)(const void *, const void *));
 
+intptr_t hashtable_iget(const HashTable *hashtable, const void *key);
+
+void hashtable_iput(HashTable *hashtable, void *key, intptr_t value);
+
 void *hashtable_get(const HashTable *hashtable, const void *key);
 
 void hashtable_put(HashTable *hashtable, void *key, void *value);
