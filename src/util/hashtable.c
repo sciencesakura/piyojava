@@ -41,10 +41,13 @@ intptr_t hashtable_iget(const HashTable *hashtable, const void *key)
 void hashtable_iput(HashTable *hashtable, void *key, intptr_t value)
 {
   size_t index = hashtable->hash(key) % hashtable->capacity;
-  HTBucket *bucket = malloc(sizeof(HTBucket));
-  bucket->key = key;
+  HTBucket *bucket = list_find(&hashtable->table[index], match, hashtable, key);
+  if (bucket == NULL) {
+    bucket = malloc(sizeof(HTBucket));
+    bucket->key = key;
+    list_add(&hashtable->table[index], bucket);
+  }
   bucket->value = value;
-  list_add(&hashtable->table[index], bucket);
 }
 
 void *hashtable_get(const HashTable *hashtable, const void *key)

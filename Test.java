@@ -30,7 +30,11 @@ public class Test {
         b = Test.a;
         Test g = new Test();
         int h = g.multiply(7, 3);
+        g.b = g.b + 1;
+        int i = g.b;
     }
+
+    int b = 100;
 
     int multiply(int a, int b) {
         return a * b;

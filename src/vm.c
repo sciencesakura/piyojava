@@ -51,6 +51,8 @@ enum Opcode {
   OPCODE_return = 0xb1,
   OPCODE_getstatic = 0xb2,
   OPCODE_putstatic = 0xb3,
+  OPCODE_getfield = 0xb4,
+  OPCODE_putfield = 0xb5,
   OPCODE_invokevirtual = 0xb6,
   OPCODE_invokespecial = 0xb7,
   OPCODE_invokestatic = 0xb8,
@@ -257,6 +259,27 @@ static void _putstatic(intptr_t *vmstack)
   ClassFile *cf = load_class(vmstack, fref->class->name);
   Field_info *fi = find_field(cf, fref->name_and_type);
   fi->staticval = stack_ipop(&frame->operands);
+}
+
+static void _getfield(Frame *frame)
+{
+  u2 indexbyte1 = nextcode(frame);
+  u2 indexbyte2 = nextcode(frame);
+  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  CONSTANT_Fieldref_info *fref = cp(frame->constant_pool, index);
+  JObject *obj = stack_pop(&frame->operands);
+  stack_ipush(&frame->operands, hashtable_iget(&obj->fields, fref->name_and_type->name));
+}
+
+static void _putfield(Frame *frame)
+{
+  u2 indexbyte1 = nextcode(frame);
+  u2 indexbyte2 = nextcode(frame);
+  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  CONSTANT_Fieldref_info *fref = cp(frame->constant_pool, index);
+  intptr_t value = stack_ipop(&frame->operands);
+  JObject *obj = stack_pop(&frame->operands);
+  hashtable_iput(&obj->fields, fref->name_and_type->name, value);
 }
 
 static void _invokevirtual(intptr_t *vmstack)
@@ -480,6 +503,12 @@ void execute(intptr_t *vmstack)
       break;
     case OPCODE_putstatic:
       _putstatic(vmstack);
+      break;
+    case OPCODE_getfield:
+      _getfield(frame);
+      break;
+    case OPCODE_putfield:
+      _putfield(frame);
       break;
     case OPCODE_invokevirtual:
       _invokevirtual(vmstack);
