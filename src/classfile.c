@@ -22,6 +22,11 @@ bool utf8eq(const void *a, const void *b)
   return ua == ub || (ua->length == ub->length && memcmp(ua->bytes, ub->bytes, ua->length) == 0);
 }
 
+bool utf8has(const CONSTANT_Utf8_info *utf8, size_t len, const void *str)
+{
+  return utf8->bytes == str || (utf8->length == len && memcmp(utf8->bytes, str, len) == 0);
+}
+
 Field_info *find_field(const ClassFile *cf, const CONSTANT_NameAndType_info *nat)
 {
   for (u2 i = 0; i < cf->fields_count; i++) {

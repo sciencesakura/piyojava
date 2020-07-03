@@ -77,6 +77,12 @@ static inline u1 nextcode(Frame *frame)
   return frame->code->code[frame->pc++];
 }
 
+static void java_io_PrintStream_println_I(intptr_t *args)
+{
+  jint x = args[1];
+  printf("%" PRId32 "\n", x);
+}
+
 static void _iconst(Frame *frame, jint i)
 {
   stack_ipush(&frame->operands, i);
@@ -291,12 +297,21 @@ static void _invokevirtual(intptr_t *vmstack)
   CONSTANT_Methodref_info *mref = cp(frame->constant_pool, index);
   ClassFile *cf = load_class(vmstack, mref->class->name);
   Method_info *me = find_method(cf, mref->name_and_type);
-  Code_attribute *code = code_attr(me);
-  intptr_t variables[code->max_locals];
+  bool native = me->access_flags & ME_ACC_NATIVE;
+  Code_attribute *code = native ? NULL : code_attr(me);
+  intptr_t variables[native ? me->args_size + 1 : code->max_locals];
   for (u1 i = me->args_size; i != 0; i--) {
     variables[i] = stack_ipop(&frame->operands);
   }
   variables[0] = stack_ipop(&frame->operands);
+  if (native) {
+    if (utf8has(cf->this_class->name, 19, "java/io/PrintStream")) {
+      if (utf8has(me->name, 7, "println") && utf8has(me->descriptor, 4, "(I)V")) {
+        java_io_PrintStream_println_I(variables);
+      }
+    }
+    return;
+  }
   intptr_t operands[code->max_stack];
   stack_push(&vmstack, &(Frame) { 0, code, variables, operands, cf->constant_pool });
   execute(vmstack);

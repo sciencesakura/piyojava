@@ -32,6 +32,7 @@ public class Test {
         int h = g.multiply(7, 3);
         g.b = g.b + 1;
         int i = g.b;
+        System.out.println(i);
     }
 
     int b = 100;
