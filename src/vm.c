@@ -34,6 +34,8 @@ enum Opcode {
   OPCODE_iinc = 0x84,
   OPCODE_ireturn = 0xac,
   OPCODE_return = 0xb1,
+  OPCODE_getstatic = 0xb2,
+  OPCODE_putstatic = 0xb3,
   OPCODE_invokestatic = 0xb8,
 };
 
@@ -166,6 +168,30 @@ static void _ireturn(const intptr_t *vmstack)
   stack_push(&invoker->operands, stack_pop(&frame->operands));
 }
 
+static void _getstatic(intptr_t *vmstack)
+{
+  Frame *frame = stack_peek(vmstack);
+  u2 indexbyte1 = nextcode(frame);
+  u2 indexbyte2 = nextcode(frame);
+  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  CONSTANT_Fieldref_info *fref = cp(frame->constant_pool, index);
+  ClassFile *cf = load_class(vmstack, fref->class->name);
+  Field_info *fi = find_field(cf, fref->name_and_type);
+  stack_ipush(&frame->operands, fi->staticval);
+}
+
+static void _putstatic(intptr_t *vmstack)
+{
+  Frame *frame = stack_peek(vmstack);
+  u2 indexbyte1 = nextcode(frame);
+  u2 indexbyte2 = nextcode(frame);
+  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  CONSTANT_Fieldref_info *fref = cp(frame->constant_pool, index);
+  ClassFile *cf = load_class(vmstack, fref->class->name);
+  Field_info *fi = find_field(cf, fref->name_and_type);
+  fi->staticval = stack_ipop(&frame->operands);
+}
+
 static void _invokestatic(intptr_t *vmstack)
 {
   Frame *frame = stack_peek(vmstack);
@@ -284,6 +310,12 @@ void execute(intptr_t *vmstack)
       return;
     case OPCODE_return:
       return;
+    case OPCODE_getstatic:
+      _getstatic(vmstack);
+      break;
+    case OPCODE_putstatic:
+      _putstatic(vmstack);
+      break;
     case OPCODE_invokestatic:
       _invokestatic(vmstack);
       break;

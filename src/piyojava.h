@@ -26,7 +26,7 @@ typedef struct CONSTANT_Integer_info CONSTANT_Integer_info;
 // typedef struct CONSTANT_Double_info CONSTANT_Double_info;
 typedef struct CONSTANT_Class_info CONSTANT_Class_info;
 // typedef struct CONSTANT_String_info CONSTANT_String_info;
-// typedef struct CONSTANT_Fieldref_info CONSTANT_Fieldref_info;
+typedef struct CONSTANT_Fieldref_info CONSTANT_Fieldref_info;
 typedef struct CONSTANT_Methodref_info CONSTANT_Methodref_info;
 // typedef struct CONSTANT_InterfaceMethodref_info CONSTANT_InterfaceMethodref_info;
 typedef struct CONSTANT_NameAndType_info CONSTANT_NameAndType_info;
@@ -97,6 +97,14 @@ struct CONSTANT_Class_info {
   CONSTANT_Utf8_info *name;
 };
 
+struct CONSTANT_Fieldref_info {
+  Constant_tag tag;
+  u2 class_index;
+  CONSTANT_Class_info *class;
+  u2 name_and_type_index;
+  CONSTANT_NameAndType_info *name_and_type;
+};
+
 struct CONSTANT_Methodref_info {
   Constant_tag tag;
   u2 class_index;
@@ -119,6 +127,7 @@ struct Field_info {
   CONSTANT_Utf8_info *descriptor;
   u2 attributes_count;
   void **attributes;
+  intptr_t staticval;
 };
 
 struct Method_info {
@@ -177,6 +186,8 @@ ClassFile *parse_class(size_t length, const void *name);
 void *cp(void **constant_pool, u2 index);
 
 bool utf8eq(const CONSTANT_Utf8_info *a, const CONSTANT_Utf8_info *b);
+
+Field_info *find_field(const ClassFile *cf, const CONSTANT_NameAndType_info *nat);
 
 Method_info *find_method(const ClassFile *cf, const CONSTANT_NameAndType_info *nat);
 

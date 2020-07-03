@@ -10,6 +10,16 @@ bool utf8eq(const CONSTANT_Utf8_info *a, const CONSTANT_Utf8_info *b)
   return a == b || (a->length == b->length && memcmp(a->bytes, b->bytes, a->length) == 0);
 }
 
+Field_info *find_field(const ClassFile *cf, const CONSTANT_NameAndType_info *nat)
+{
+  for (u2 i = 0; i < cf->fields_count; i++) {
+    Field_info *fi = &cf->fields[i];
+    if (utf8eq(fi->name, nat->name))
+      return fi;
+  }
+  return NULL;
+}
+
 Method_info *find_method(const ClassFile *cf, const CONSTANT_NameAndType_info *nat)
 {
   for (u2 i = 0; i < cf->methods_count; i++) {

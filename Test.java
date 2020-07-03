@@ -1,5 +1,7 @@
 public class Test {
 
+    static int a;
+
     static int zero() {
         return 0;
     }
@@ -24,5 +26,7 @@ public class Test {
         c = c / 71;
         d = e * 3;
         e = -d;
+        Test.a = a;
+        b = Test.a;
     }
 }

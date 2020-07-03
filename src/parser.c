@@ -1,6 +1,6 @@
 #include "piyojava.h"
 
-const CONSTANT_Utf8_info *Code = &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 4, (u1[]) { "Code" } };
+const CONSTANT_Utf8_info *Code = &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 4, (u1 *)"Code" };
 
 static void read_attributes(u2 count, void ***ptr, void **constant_pool, FILE *strm);
 
@@ -60,6 +60,14 @@ static void read_constant_pool(u2 count, void ***ptr, FILE *strm)
       read_u2(&c->name_index, strm);
       break;
     }
+    case CONSTANT_Fieldref: {
+      CONSTANT_Fieldref_info *c = malloc(sizeof(CONSTANT_Fieldref_info));
+      (*ptr)[i] = c;
+      c->tag = tag;
+      read_u2(&c->class_index, strm);
+      read_u2(&c->name_and_type_index, strm);
+      break;
+    }
     case CONSTANT_Methodref: {
       CONSTANT_Methodref_info *c = malloc(sizeof(CONSTANT_Methodref_info));
       (*ptr)[i] = c;
@@ -86,6 +94,12 @@ static void read_constant_pool(u2 count, void ***ptr, FILE *strm)
     case CONSTANT_Class: {
       CONSTANT_Class_info *c = (CONSTANT_Class_info *)tc;
       c->name = cp(*ptr, c->name_index);
+      break;
+    }
+    case CONSTANT_Fieldref: {
+      CONSTANT_Fieldref_info *c = (CONSTANT_Fieldref_info *)tc;
+      c->class = cp(*ptr, c->class_index);
+      c->name_and_type = cp(*ptr, c->name_and_type_index);
       break;
     }
     case CONSTANT_Methodref: {
@@ -170,8 +184,19 @@ static void read_fields(u2 count, Field_info **ptr, void **constant_pool, FILE *
     *ptr = NULL;
     return;
   }
-  // TODO
-  error(L"field is unsupported");
+  *ptr = calloc(count, sizeof(Method_info));
+  for (u2 i = 0; i < count; i++) {
+    Field_info *fi = &(*ptr)[i];
+    read_u2(&fi->access_flags, strm);
+    u2 name_index;
+    read_u2(&name_index, strm);
+    fi->name = cp(constant_pool, name_index);
+    u2 descriptor_index;
+    read_u2(&descriptor_index, strm);
+    fi->descriptor = cp(constant_pool, descriptor_index);
+    read_u2(&fi->attributes_count, strm);
+    read_attributes(fi->attributes_count, &fi->attributes, constant_pool, strm);
+  }
 }
 
 static void read_methods(u2 count, Method_info **ptr, void **constant_pool, FILE *strm)
