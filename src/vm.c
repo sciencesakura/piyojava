@@ -51,6 +51,7 @@ enum Opcode {
   OPCODE_return = 0xb1,
   OPCODE_getstatic = 0xb2,
   OPCODE_putstatic = 0xb3,
+  OPCODE_invokevirtual = 0xb6,
   OPCODE_invokespecial = 0xb7,
   OPCODE_invokestatic = 0xb8,
   OPCODE_new = 0xbb,
@@ -258,7 +259,7 @@ static void _putstatic(intptr_t *vmstack)
   fi->staticval = stack_ipop(&frame->operands);
 }
 
-static void _invokespecial(intptr_t *vmstack)
+static void _invokevirtual(intptr_t *vmstack)
 {
   Frame *frame = stack_peek(vmstack);
   u2 indexbyte1 = nextcode(frame);
@@ -277,6 +278,11 @@ static void _invokespecial(intptr_t *vmstack)
   stack_push(&vmstack, &(Frame) { 0, code, variables, operands, cf->constant_pool });
   execute(vmstack);
   stack_pop(&vmstack);
+}
+
+static void _invokespecial(intptr_t *vmstack)
+{
+  _invokevirtual(vmstack); // TODO 暫定
 }
 
 static void _invokestatic(intptr_t *vmstack)
@@ -475,11 +481,14 @@ void execute(intptr_t *vmstack)
     case OPCODE_putstatic:
       _putstatic(vmstack);
       break;
-    case OPCODE_invokestatic:
-      _invokestatic(vmstack);
+    case OPCODE_invokevirtual:
+      _invokevirtual(vmstack);
       break;
     case OPCODE_invokespecial:
       _invokespecial(vmstack);
+      break;
+    case OPCODE_invokestatic:
+      _invokestatic(vmstack);
       break;
     case OPCODE_new:
       _new(vmstack);

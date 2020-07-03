@@ -29,5 +29,10 @@ public class Test {
         Test.a = a;
         b = Test.a;
         Test g = new Test();
+        int h = g.multiply(7, 3);
+    }
+
+    int multiply(int a, int b) {
+        return a * b;
     }
 }
