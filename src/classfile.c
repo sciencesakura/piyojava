@@ -17,7 +17,7 @@ Method_info *find_method(const ClassFile *cf, const CONSTANT_NameAndType_info *n
     if (utf8eq(me->name, nat->name) && utf8eq(me->descriptor, nat->descriptor))
       return me;
   }
-  error(L"method was not found");
+  return NULL;
 }
 
 static void *find_attribute(u2 attributes_count, void **attributes, size_t namelen,

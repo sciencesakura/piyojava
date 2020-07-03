@@ -1,6 +1,7 @@
 #ifndef PIYOJAVA_H
 #define PIYOJAVA_H
 
+#include "util/hashtable.h"
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -163,9 +164,13 @@ struct Frame {
 
 #define ME_ACC_STATIC 0x0008
 
+extern HashTable classes;
+
 void debug(const wchar_t *message, ...);
 
 noreturn void error(const wchar_t *message, ...);
+
+ClassFile *load_class(intptr_t *vmstack, CONSTANT_Utf8_info *name);
 
 ClassFile *parse_class(size_t length, const void *name);
 

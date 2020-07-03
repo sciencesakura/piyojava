@@ -1,4 +1,5 @@
 #include "piyojava.h"
+#include "util/hashtable.h"
 #include "util/stack.h"
 
 typedef enum Opcode Opcode;
@@ -35,6 +36,13 @@ enum Opcode {
   OPCODE_return = 0xb1,
   OPCODE_invokestatic = 0xb8,
 };
+
+const CONSTANT_NameAndType_info *CLINIT_NAT
+    = &(CONSTANT_NameAndType_info) { CONSTANT_NameAndType,
+                                     0,
+                                     &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 8, (u1 *)"<clinit>" },
+                                     0,
+                                     &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 3, (u1 *)"()V" } };
 
 #define APPEND_8BIT(a, b) (((a) << 8) | (b))
 
@@ -165,7 +173,7 @@ static void _invokestatic(intptr_t *vmstack)
   u2 indexbyte2 = nextcode(frame);
   u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
   CONSTANT_Methodref_info *mref = cp(frame->constant_pool, index);
-  ClassFile *cf = parse_class(mref->class->name->length, mref->class->name->bytes);
+  ClassFile *cf = load_class(vmstack, mref->class->name);
   Method_info *me = find_method(cf, mref->name_and_type);
   if (!(me->access_flags & ME_ACC_STATIC)) {
     error(L"method must be static - invokestatic(pc=%" PRIu32 ")", frame->pc);
@@ -285,3 +293,21 @@ void execute(intptr_t *vmstack)
   }
 }
 
+ClassFile *load_class(intptr_t *vmstack, CONSTANT_Utf8_info *name)
+{
+  ClassFile *cf = hashtable_get(&classes, name);
+  if (cf != NULL)
+    return cf;
+  cf = parse_class(name->length, name->bytes);
+  hashtable_put(&classes, name, cf);
+  Method_info *clinit = find_method(cf, CLINIT_NAT);
+  if (clinit == NULL || !(clinit->access_flags & ME_ACC_STATIC))
+    return cf;
+  Code_attribute *code = code_attr(clinit);
+  intptr_t variables[code->max_locals];
+  intptr_t operands[code->max_stack];
+  stack_push(&vmstack, &(Frame) { 0, code, variables, operands, cf->constant_pool });
+  execute(vmstack);
+  stack_pop(&vmstack);
+  return cf;
+}

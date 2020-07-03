@@ -91,22 +91,40 @@ void log_classfile(ClassFile *cf)
 const CONSTANT_NameAndType_info *MAIN_NAT = &(CONSTANT_NameAndType_info) {
   CONSTANT_NameAndType,
   0,
-  &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 4, (u1[]) { "main" } },
+  &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 4, (u1 *)"main" },
   0,
-  &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 22, (u1[]) { "([Ljava/lang/String;)V" } }
+  &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 22, (u1 *)"([Ljava/lang/String;)V" }
 };
+
+HashTable classes;
+
+static size_t hash_classname(const void *classname)
+{
+  CONSTANT_Utf8_info *cn = (CONSTANT_Utf8_info *)classname;
+  size_t hv = 0;
+  for (u2 i = 0; i < cn->length; i++) {
+    hv = 31 * hv + *(cn->bytes + i);
+  }
+  return hv;
+}
+
+static bool p_utf8eq(const void *a, const void *b)
+{
+  return utf8eq((CONSTANT_Utf8_info *)a, (CONSTANT_Utf8_info *)b);
+}
 
 int main(int argc, char **argv)
 {
   if (argc < 2) {
     error(L"piyojava <classfile>");
   }
-  ClassFile *cf = parse_class(strlen(argv[1]), argv[1]);
-  // log_classfile(cf);
   intptr_t _vmstack[1024]; // サイズ適当
   intptr_t *vmstack = _vmstack;
+  hashtable_init(&classes, 128, hash_classname, p_utf8eq);
+  ClassFile *cf = load_class(
+      vmstack, &(CONSTANT_Utf8_info) { CONSTANT_Utf8, strlen(argv[1]), (u1 *)argv[1] });
   Method_info *main = find_method(cf, MAIN_NAT);
-  if (!(main->access_flags & ME_ACC_STATIC)) {
+  if (main == NULL || !(main->access_flags & ME_ACC_STATIC)) {
     error(L"not found");
   }
   Code_attribute *code = code_attr(main);
