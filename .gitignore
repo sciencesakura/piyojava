@@ -1,4 +1,7 @@
 *.class
+*.log
 *.o
+/actual
+/expected
 /compile_commands.json
 /piyojava

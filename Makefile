@@ -11,11 +11,14 @@ JCLAS := $(JSRCS:.java=.class)
 piyojava: $(OBJS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-check: piyojava $(JCLAS)
-	./piyojava Test
+check: piyojava expected
+	./check.sh
+
+expected: $(JCLAS)
+	java Test > expected
 
 clean:
-	$(RM) piyojava $(OBJS)
+	$(RM) piyojava $(OBJS) $(JCALS) expected
 
 $(OBJS): $(HEAD)
 
