@@ -126,6 +126,15 @@ public class Test {
         for (int j = 0; j < 5; j++) {
             System.out.println(j);
         }
+
+        System.out.println('A');
+        char[] k = {'a', 'i', 'u'};
+        System.out.println(k.length);
+        System.out.println(k[0]);
+        System.out.println(k[1]);
+        System.out.println(k[2]);
+        k[1] = 'x';
+        System.out.println(k[1]);
     }
 
     int i_a;

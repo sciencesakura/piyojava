@@ -7,6 +7,7 @@ typedef enum ArrayType ArrayType;
 typedef struct JObject JObject;
 typedef struct JArray JArray;
 typedef struct JIntArray JIntArray;
+typedef struct JCharArray JCharArray;
 
 enum Opcode {
   OPCODE_nop = 0x00,
@@ -32,6 +33,7 @@ enum Opcode {
   OPCODE_aload_2 = 0x2c,
   OPCODE_aload_3 = 0x2d,
   OPCODE_iaload = 0x2e,
+  OPCODE_caload = 0x34,
   OPCODE_istore = 0x36,
   OPCODE_astore = 0x3a,
   OPCODE_istore_0 = 0x3b,
@@ -43,6 +45,7 @@ enum Opcode {
   OPCODE_astore_2 = 0x4d,
   OPCODE_astore_3 = 0x4e,
   OPCODE_iastore = 0x4f,
+  OPCODE_castore = 0x55,
   OPCODE_dup = 0x59,
   OPCODE_dup_x1 = 0x5a,
   OPCODE_dup_x2 = 0x5b,
@@ -109,6 +112,11 @@ struct JIntArray {
   jint *values;
 };
 
+struct JCharArray {
+  jint length;
+  jchar *values;
+};
+
 const CONSTANT_NameAndType_info *CLINIT_NAT
     = &(CONSTANT_NameAndType_info) { CONSTANT_NameAndType,
                                      0,
@@ -124,10 +132,16 @@ static inline u1 nextcode(Frame *frame)
   return frame->code->code[frame->pc++];
 }
 
+static void java_io_PrintStream_println_C(intptr_t *args)
+{
+  jchar x = args[1];
+  wprintf(L"%lc\n", x);
+}
+
 static void java_io_PrintStream_println_I(intptr_t *args)
 {
   jint x = args[1];
-  printf("%" PRId32 "\n", x);
+  wprintf(L"%" PRId32 "\n", x);
 }
 
 static void _aconst_null(Frame *frame)
@@ -196,6 +210,13 @@ static void _iaload(Frame *frame)
   stack_ipush(&frame->operands, ary->values[index]);
 }
 
+static void _caload(Frame *frame)
+{
+  jint index = stack_ipop(&frame->operands);
+  JCharArray *ary = stack_pop(&frame->operands);
+  stack_ipush(&frame->operands, ary->values[index]);
+}
+
 static void _istore_n(Frame *frame, u1 n)
 {
   frame->variables[n] = stack_ipop(&frame->operands);
@@ -221,6 +242,14 @@ static void _iastore(Frame *frame)
   jint value = stack_ipop(&frame->operands);
   jint index = stack_ipop(&frame->operands);
   JIntArray *ary = stack_pop(&frame->operands);
+  ary->values[index] = value;
+}
+
+static void _castore(Frame *frame)
+{
+  jchar value = stack_ipop(&frame->operands);
+  jint index = stack_ipop(&frame->operands);
+  JCharArray *ary = stack_pop(&frame->operands);
   ary->values[index] = value;
 }
 
@@ -528,7 +557,9 @@ static void _invokevirtual(intptr_t *vmstack)
   variables[0] = stack_ipop(&frame->operands);
   if (native) {
     if (utf8has(cf->this_class->name, 19, "java/io/PrintStream")) {
-      if (utf8has(me->name, 7, "println") && utf8has(me->descriptor, 4, "(I)V")) {
+      if (utf8has(me->name, 7, "println") && utf8has(me->descriptor, 4, "(C)V")) {
+        java_io_PrintStream_println_C(variables);
+      } else if (utf8has(me->name, 7, "println") && utf8has(me->descriptor, 4, "(I)V")) {
         java_io_PrintStream_println_I(variables);
       }
     }
@@ -607,6 +638,12 @@ static void _newarray(Frame *frame)
   jint count = stack_ipop(&frame->operands);
   JArray *ary;
   switch (atype) {
+  case T_CHAR: {
+    JCharArray *a = malloc(sizeof(JCharArray));
+    a->values = calloc(count, sizeof(jchar));
+    ary = (JArray *)a;
+    break;
+  }
   case T_INT: {
     JIntArray *a = malloc(sizeof(JIntArray));
     a->values = calloc(count, sizeof(jint));
@@ -730,6 +767,9 @@ void execute(intptr_t *vmstack)
     case OPCODE_iaload:
       _iaload(frame);
       break;
+    case OPCODE_caload:
+      _caload(frame);
+      break;
     case OPCODE_istore:
       _istore(frame);
       break;
@@ -762,6 +802,9 @@ void execute(intptr_t *vmstack)
       break;
     case OPCODE_iastore:
       _iastore(frame);
+      break;
+    case OPCODE_castore:
+      _castore(frame);
       break;
     case OPCODE_dup:
       _dup(frame);
