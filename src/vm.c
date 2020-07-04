@@ -3,7 +3,10 @@
 #include "util/stack.h"
 
 typedef enum Opcode Opcode;
+typedef enum ArrayType ArrayType;
 typedef struct JObject JObject;
+typedef struct JArray JArray;
+typedef struct JIntArray JIntArray;
 
 enum Opcode {
   OPCODE_nop = 0x00,
@@ -27,6 +30,7 @@ enum Opcode {
   OPCODE_aload_1 = 0x2b,
   OPCODE_aload_2 = 0x2c,
   OPCODE_aload_3 = 0x2d,
+  OPCODE_iaload = 0x2e,
   OPCODE_istore = 0x36,
   OPCODE_astore = 0x3a,
   OPCODE_istore_0 = 0x3b,
@@ -37,6 +41,7 @@ enum Opcode {
   OPCODE_astore_1 = 0x4c,
   OPCODE_astore_2 = 0x4d,
   OPCODE_astore_3 = 0x4e,
+  OPCODE_iastore = 0x4f,
   OPCODE_dup = 0x59,
   OPCODE_dup_x1 = 0x5a,
   OPCODE_dup_x2 = 0x5b,
@@ -57,10 +62,32 @@ enum Opcode {
   OPCODE_invokespecial = 0xb7,
   OPCODE_invokestatic = 0xb8,
   OPCODE_new = 0xbb,
+  OPCODE_newarray = 0xbc,
+  OPCODE_arraylength = 0xbe,
+};
+
+enum ArrayType {
+  T_BOOLEAN = 4,
+  T_CHAR = 5,
+  T_FLOAT = 6,
+  T_DOUBLE = 7,
+  T_BYTE = 8,
+  T_SHORT = 9,
+  T_INT = 10,
+  T_LONG = 11,
 };
 
 struct JObject {
   HashTable fields;
+};
+
+struct JArray {
+  jint length;
+};
+
+struct JIntArray {
+  jint length;
+  jint *values;
 };
 
 const CONSTANT_NameAndType_info *CLINIT_NAT
@@ -137,6 +164,13 @@ static void _aload(Frame *frame)
   _aload_n(frame, nextcode(frame));
 }
 
+static void _iaload(Frame *frame)
+{
+  jint index = stack_ipop(&frame->operands);
+  JIntArray *ary = stack_pop(&frame->operands);
+  stack_ipush(&frame->operands, ary->values[index]);
+}
+
 static void _istore_n(Frame *frame, u1 n)
 {
   frame->variables[n] = stack_ipop(&frame->operands);
@@ -155,6 +189,14 @@ static void _astore_n(Frame *frame, u1 n)
 static void _astore(Frame *frame)
 {
   _astore_n(frame, nextcode(frame));
+}
+
+static void _iastore(Frame *frame)
+{
+  jint value = stack_ipop(&frame->operands);
+  jint index = stack_ipop(&frame->operands);
+  JIntArray *ary = stack_pop(&frame->operands);
+  ary->values[index] = value;
 }
 
 static void _dup(Frame *frame)
@@ -379,6 +421,31 @@ static void _new(intptr_t *vmstack)
   stack_push(&frame->operands, obj);
 }
 
+static void _newarray(Frame *frame)
+{
+  ArrayType atype = nextcode(frame);
+  jint count = stack_ipop(&frame->operands);
+  JArray *ary;
+  switch (atype) {
+  case T_INT: {
+    JIntArray *a = malloc(sizeof(JIntArray));
+    a->values = calloc(count, sizeof(jint));
+    ary = (JArray *)a;
+    break;
+  }
+  default:
+    error(L"unsupported");
+  }
+  ary->length = count;
+  stack_push(&frame->operands, ary);
+}
+
+static void _arraylength(Frame *frame)
+{
+  JArray *ary = stack_pop(&frame->operands);
+  stack_ipush(&frame->operands, ary->length);
+}
+
 void execute(intptr_t *vmstack)
 {
   Frame *frame = stack_peek(vmstack);
@@ -448,6 +515,9 @@ void execute(intptr_t *vmstack)
     case OPCODE_aload_3:
       _aload_n(frame, 3);
       break;
+    case OPCODE_iaload:
+      _iaload(frame);
+      break;
     case OPCODE_istore:
       _istore(frame);
       break;
@@ -477,6 +547,9 @@ void execute(intptr_t *vmstack)
       break;
     case OPCODE_astore_3:
       _astore_n(frame, 3);
+      break;
+    case OPCODE_iastore:
+      _iastore(frame);
       break;
     case OPCODE_dup:
       _dup(frame);
@@ -536,6 +609,12 @@ void execute(intptr_t *vmstack)
       break;
     case OPCODE_new:
       _new(vmstack);
+      break;
+    case OPCODE_newarray:
+      _newarray(frame);
+      break;
+    case OPCODE_arraylength:
+      _arraylength(frame);
       break;
     default:
       error(L"unknown instruction(pc=%" PRIu32 ", opcode=0x%02x)", frame->pc - 1, opcode);

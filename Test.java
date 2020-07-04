@@ -52,6 +52,14 @@ public class Test {
 
         System.out.println(test.i_zero());
         System.out.println(test.i_add(13, 8));
+
+        int[] h = {10, 20, 30};
+        System.out.println(h.length);
+        System.out.println(h[0]);
+        System.out.println(h[1]);
+        System.out.println(h[2]);
+        h[1] = 40;
+        System.out.println(h[1]);
     }
 
     int i_a;
