@@ -67,6 +67,7 @@ enum Opcode {
   OPCODE_if_icmple = 0xa4,
   OPCODE_if_acmpeq = 0xa5,
   OPCODE_if_acmpne = 0xa6,
+  OPCODE_goto = 0xa7,
   OPCODE_ireturn = 0xac,
   OPCODE_return = 0xb1,
   OPCODE_getstatic = 0xb2,
@@ -81,6 +82,7 @@ enum Opcode {
   OPCODE_arraylength = 0xbe,
   OPCODE_ifnull = 0xc6,
   OPCODE_ifnonnull = 0xc7,
+  OPCODE_goto_w = 0xc8,
 };
 
 enum ArrayType {
@@ -114,7 +116,8 @@ const CONSTANT_NameAndType_info *CLINIT_NAT
                                      0,
                                      &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 3, (u1 *)"()V" } };
 
-#define APPEND_8BIT(a, b) (((a) << 8) | (b))
+#define BYTECONCATx2(a, b)       (((a) << 8) | (b))
+#define BYTECONCATx4(a, b, c, d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
 
 static inline u1 nextcode(Frame *frame)
 {
@@ -147,7 +150,7 @@ static void _sipush(Frame *frame)
 {
   u2 byte1 = nextcode(frame);
   u2 byte2 = nextcode(frame);
-  jint value = (int16_t)APPEND_8BIT(byte1, byte2);
+  jint value = (int16_t)BYTECONCATx2(byte1, byte2);
   stack_ipush(&frame->operands, value);
 }
 
@@ -306,7 +309,7 @@ static void _ifeq(Frame *frame)
   u4 branchbyte2 = nextcode(frame);
   jint value = stack_ipop(&frame->operands);
   if (value == 0) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -316,7 +319,7 @@ static void _ifne(Frame *frame)
   u2 branchbyte2 = nextcode(frame);
   jint value = stack_ipop(&frame->operands);
   if (value != 0) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -326,7 +329,7 @@ static void _iflt(Frame *frame)
   u2 branchbyte2 = nextcode(frame);
   jint value = stack_ipop(&frame->operands);
   if (value < 0) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -336,7 +339,7 @@ static void _ifge(Frame *frame)
   u2 branchbyte2 = nextcode(frame);
   jint value = stack_ipop(&frame->operands);
   if (value >= 0) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -346,7 +349,7 @@ static void _ifgt(Frame *frame)
   u2 branchbyte2 = nextcode(frame);
   jint value = stack_ipop(&frame->operands);
   if (value > 0) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -356,7 +359,7 @@ static void _ifle(Frame *frame)
   u2 branchbyte2 = nextcode(frame);
   jint value = stack_ipop(&frame->operands);
   if (value <= 0) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -367,7 +370,7 @@ static void _if_icmpeq(Frame *frame)
   jint value2 = stack_ipop(&frame->operands);
   jint value1 = stack_ipop(&frame->operands);
   if (value1 == value2) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -378,7 +381,7 @@ static void _if_icmpne(Frame *frame)
   jint value2 = stack_ipop(&frame->operands);
   jint value1 = stack_ipop(&frame->operands);
   if (value1 != value2) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -389,7 +392,7 @@ static void _if_icmplt(Frame *frame)
   jint value2 = stack_ipop(&frame->operands);
   jint value1 = stack_ipop(&frame->operands);
   if (value1 < value2) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -400,7 +403,7 @@ static void _if_icmpge(Frame *frame)
   jint value2 = stack_ipop(&frame->operands);
   jint value1 = stack_ipop(&frame->operands);
   if (value1 >= value2) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -411,7 +414,7 @@ static void _if_icmpgt(Frame *frame)
   jint value2 = stack_ipop(&frame->operands);
   jint value1 = stack_ipop(&frame->operands);
   if (value1 > value2) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -422,7 +425,7 @@ static void _if_icmple(Frame *frame)
   jint value2 = stack_ipop(&frame->operands);
   jint value1 = stack_ipop(&frame->operands);
   if (value1 <= value2) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -433,7 +436,7 @@ static void _if_acmpeq(Frame *frame)
   void *value2 = stack_pop(&frame->operands);
   void *value1 = stack_pop(&frame->operands);
   if (value1 == value2) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -444,8 +447,15 @@ static void _if_acmpne(Frame *frame)
   void *value2 = stack_pop(&frame->operands);
   void *value1 = stack_pop(&frame->operands);
   if (value1 != value2) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
+}
+
+static void _goto(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
 }
 
 static void _ireturn(const intptr_t *vmstack)
@@ -460,7 +470,7 @@ static void _getstatic(intptr_t *vmstack)
   Frame *frame = stack_peek(vmstack);
   u2 indexbyte1 = nextcode(frame);
   u2 indexbyte2 = nextcode(frame);
-  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  u2 index = BYTECONCATx2(indexbyte1, indexbyte2);
   CONSTANT_Fieldref_info *fref = cp(frame->constant_pool, index);
   ClassFile *cf = load_class(vmstack, fref->class->name);
   Field_info *fi = find_field(cf, fref->name_and_type);
@@ -472,7 +482,7 @@ static void _putstatic(intptr_t *vmstack)
   Frame *frame = stack_peek(vmstack);
   u2 indexbyte1 = nextcode(frame);
   u2 indexbyte2 = nextcode(frame);
-  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  u2 index = BYTECONCATx2(indexbyte1, indexbyte2);
   CONSTANT_Fieldref_info *fref = cp(frame->constant_pool, index);
   ClassFile *cf = load_class(vmstack, fref->class->name);
   Field_info *fi = find_field(cf, fref->name_and_type);
@@ -483,7 +493,7 @@ static void _getfield(Frame *frame)
 {
   u2 indexbyte1 = nextcode(frame);
   u2 indexbyte2 = nextcode(frame);
-  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  u2 index = BYTECONCATx2(indexbyte1, indexbyte2);
   CONSTANT_Fieldref_info *fref = cp(frame->constant_pool, index);
   JObject *obj = stack_pop(&frame->operands);
   stack_ipush(&frame->operands, hashtable_iget(&obj->fields, fref->name_and_type->name));
@@ -493,7 +503,7 @@ static void _putfield(Frame *frame)
 {
   u2 indexbyte1 = nextcode(frame);
   u2 indexbyte2 = nextcode(frame);
-  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  u2 index = BYTECONCATx2(indexbyte1, indexbyte2);
   CONSTANT_Fieldref_info *fref = cp(frame->constant_pool, index);
   intptr_t value = stack_ipop(&frame->operands);
   JObject *obj = stack_pop(&frame->operands);
@@ -505,7 +515,7 @@ static void _invokevirtual(intptr_t *vmstack)
   Frame *frame = stack_peek(vmstack);
   u2 indexbyte1 = nextcode(frame);
   u2 indexbyte2 = nextcode(frame);
-  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  u2 index = BYTECONCATx2(indexbyte1, indexbyte2);
   CONSTANT_Methodref_info *mref = cp(frame->constant_pool, index);
   ClassFile *cf = load_class(vmstack, mref->class->name);
   Method_info *me = find_method(cf, mref->name_and_type);
@@ -540,7 +550,7 @@ static void _invokestatic(intptr_t *vmstack)
   Frame *frame = stack_peek(vmstack);
   u2 indexbyte1 = nextcode(frame);
   u2 indexbyte2 = nextcode(frame);
-  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  u2 index = BYTECONCATx2(indexbyte1, indexbyte2);
   CONSTANT_Methodref_info *mref = cp(frame->constant_pool, index);
   ClassFile *cf = load_class(vmstack, mref->class->name);
   Method_info *me = find_method(cf, mref->name_and_type);
@@ -563,7 +573,7 @@ static void _new(intptr_t *vmstack)
   Frame *frame = stack_peek(vmstack);
   u2 indexbyte1 = nextcode(frame);
   u2 indexbyte2 = nextcode(frame);
-  u2 index = APPEND_8BIT(indexbyte1, indexbyte2);
+  u2 index = BYTECONCATx2(indexbyte1, indexbyte2);
   CONSTANT_Class_info *cinf = cp(frame->constant_pool, index);
   ClassFile *cf = load_class(vmstack, cinf->name);
   JObject *obj = malloc(sizeof(JObject));
@@ -622,7 +632,7 @@ static void _ifnull(Frame *frame)
   u2 branchbyte2 = nextcode(frame);
   void *value = stack_pop(&frame->operands);
   if (value == NULL) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
 }
 
@@ -632,8 +642,17 @@ static void _ifnonnull(Frame *frame)
   u2 branchbyte2 = nextcode(frame);
   void *value = stack_pop(&frame->operands);
   if (value != NULL) {
-    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+    frame->pc += (int16_t)BYTECONCATx2(branchbyte1, branchbyte2) - 3;
   }
+}
+
+static void _goto_w(Frame *frame)
+{
+  u4 branchbyte1 = nextcode(frame);
+  u4 branchbyte2 = nextcode(frame);
+  u4 branchbyte3 = nextcode(frame);
+  u4 branchbyte4 = nextcode(frame);
+  frame->pc += (int32_t)BYTECONCATx4(branchbyte1, branchbyte2, branchbyte3, branchbyte4) - 5;
 }
 
 void execute(intptr_t *vmstack)
@@ -816,6 +835,9 @@ void execute(intptr_t *vmstack)
     case OPCODE_if_acmpne:
       _if_acmpne(frame);
       break;
+    case OPCODE_goto:
+      _goto(frame);
+      break;
     case OPCODE_ireturn:
       _ireturn(vmstack);
       return;
@@ -856,6 +878,9 @@ void execute(intptr_t *vmstack)
       break;
     case OPCODE_ifnonnull:
       _ifnonnull(frame);
+      break;
+    case OPCODE_goto_w:
+      _goto_w(frame);
       break;
     default:
       error(L"unknown instruction(pc=%" PRIu32 ", opcode=0x%02x)", frame->pc - 1, opcode);
