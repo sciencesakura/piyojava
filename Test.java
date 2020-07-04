@@ -60,6 +60,69 @@ public class Test {
         System.out.println(h[2]);
         h[1] = 40;
         System.out.println(h[1]);
+
+        if (a == 0) {
+            System.out.println(0);
+        }
+        if (a != 0) {
+            System.out.println(1);
+        }
+        if (a == 42) {
+            System.out.println(2);
+        }
+        if (a != 42) {
+            System.out.println(3);
+        }
+        if (a < 42) {
+            System.out.println(4);
+        }
+        if (a < 43) {
+            System.out.println(5);
+        }
+        if (a <= 41) {
+            System.out.println(6);
+        }
+        if (a <= 42) {
+            System.out.println(7);
+        }
+        if (a > 41) {
+            System.out.println(8);
+        }
+        if (a > 42) {
+            System.out.println(9);
+        }
+        if (a >= 42) {
+            System.out.println(10);
+        }
+        if (a >= 43) {
+            System.out.println(11);
+        }
+        int[] i = null;
+        if (h == null) {
+            System.out.println(12);
+        }
+        if (i == null) {
+            System.out.println(13);
+        }
+        if (h != null) {
+            System.out.println(14);
+        }
+        if (i != null) {
+            System.out.println(15);
+        }
+        if (h == i) {
+            System.out.println(16);
+        }
+        if (h != i) {
+            System.out.println(17);
+        }
+        i = h;
+        if (h == i) {
+            System.out.println(18);
+        }
+        if (h != i) {
+            System.out.println(19);
+        }
     }
 
     int i_a;

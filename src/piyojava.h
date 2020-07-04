@@ -141,6 +141,8 @@ struct Method_info {
 
 struct Attribute_info {
   CONSTANT_Utf8_info *attribute_name;
+  u4 attribute_length;
+  u1 *info;
 };
 
 struct Code_attribute {

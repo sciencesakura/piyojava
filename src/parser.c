@@ -173,7 +173,12 @@ static void read_attributes(u2 count, void ***ptr, void **constant_pool, FILE *s
     if (utf8eq(attribute_name, Code)) {
       read_code_attribute(&(*ptr)[i], attribute_name, constant_pool, strm);
     } else {
-      error(L"attributes[%" PRIu16 "] is unknown", i);
+      Attribute_info *attr = malloc(sizeof(Attribute_info));
+      (*ptr)[i] = attr;
+      attr->attribute_name = attribute_name;
+      read_u4(&attr->attribute_length, strm);
+      attr->info = calloc(attr->attribute_length, 1);
+      read_bytes(&attr->info, attr->attribute_length, strm);
     }
   }
 }

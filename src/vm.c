@@ -10,6 +10,7 @@ typedef struct JIntArray JIntArray;
 
 enum Opcode {
   OPCODE_nop = 0x00,
+  OPCODE_aconsr_null = 0x01,
   OPCODE_iconst_m1 = 0x02,
   OPCODE_iconst_0 = 0x03,
   OPCODE_iconst_1 = 0x04,
@@ -52,6 +53,20 @@ enum Opcode {
   OPCODE_irem = 0x70,
   OPCODE_ineg = 0x74,
   OPCODE_iinc = 0x84,
+  OPCODE_ifeq = 0x99,
+  OPCODE_ifne = 0x9a,
+  OPCODE_iflt = 0x9b,
+  OPCODE_ifge = 0x9c,
+  OPCODE_ifgt = 0x9d,
+  OPCODE_ifle = 0x9e,
+  OPCODE_if_icmpeq = 0x9f,
+  OPCODE_if_icmpne = 0xa0,
+  OPCODE_if_icmplt = 0xa1,
+  OPCODE_if_icmpge = 0xa2,
+  OPCODE_if_icmpgt = 0xa3,
+  OPCODE_if_icmple = 0xa4,
+  OPCODE_if_acmpeq = 0xa5,
+  OPCODE_if_acmpne = 0xa6,
   OPCODE_ireturn = 0xac,
   OPCODE_return = 0xb1,
   OPCODE_getstatic = 0xb2,
@@ -64,6 +79,8 @@ enum Opcode {
   OPCODE_new = 0xbb,
   OPCODE_newarray = 0xbc,
   OPCODE_arraylength = 0xbe,
+  OPCODE_ifnull = 0xc6,
+  OPCODE_ifnonnull = 0xc7,
 };
 
 enum ArrayType {
@@ -108,6 +125,11 @@ static void java_io_PrintStream_println_I(intptr_t *args)
 {
   jint x = args[1];
   printf("%" PRId32 "\n", x);
+}
+
+static void _aconst_null(Frame *frame)
+{
+  stack_push(&frame->operands, NULL);
 }
 
 static void _iconst(Frame *frame, jint i)
@@ -278,6 +300,154 @@ static void _iinc(Frame *frame)
   frame->variables[index] = value + (int8_t)nextcode(frame);
 }
 
+static void _ifeq(Frame *frame)
+{
+  u4 branchbyte1 = nextcode(frame);
+  u4 branchbyte2 = nextcode(frame);
+  jint value = stack_ipop(&frame->operands);
+  if (value == 0) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _ifne(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  jint value = stack_ipop(&frame->operands);
+  if (value != 0) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _iflt(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  jint value = stack_ipop(&frame->operands);
+  if (value < 0) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _ifge(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  jint value = stack_ipop(&frame->operands);
+  if (value >= 0) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _ifgt(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  jint value = stack_ipop(&frame->operands);
+  if (value > 0) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _ifle(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  jint value = stack_ipop(&frame->operands);
+  if (value <= 0) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _if_icmpeq(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  jint value2 = stack_ipop(&frame->operands);
+  jint value1 = stack_ipop(&frame->operands);
+  if (value1 == value2) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _if_icmpne(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  jint value2 = stack_ipop(&frame->operands);
+  jint value1 = stack_ipop(&frame->operands);
+  if (value1 != value2) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _if_icmplt(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  jint value2 = stack_ipop(&frame->operands);
+  jint value1 = stack_ipop(&frame->operands);
+  if (value1 < value2) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _if_icmpge(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  jint value2 = stack_ipop(&frame->operands);
+  jint value1 = stack_ipop(&frame->operands);
+  if (value1 >= value2) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _if_icmpgt(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  jint value2 = stack_ipop(&frame->operands);
+  jint value1 = stack_ipop(&frame->operands);
+  if (value1 > value2) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _if_icmple(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  jint value2 = stack_ipop(&frame->operands);
+  jint value1 = stack_ipop(&frame->operands);
+  if (value1 <= value2) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _if_acmpeq(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  void *value2 = stack_pop(&frame->operands);
+  void *value1 = stack_pop(&frame->operands);
+  if (value1 == value2) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _if_acmpne(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  void *value2 = stack_pop(&frame->operands);
+  void *value1 = stack_pop(&frame->operands);
+  if (value1 != value2) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
 static void _ireturn(const intptr_t *vmstack)
 {
   Frame *frame = stack_peek(vmstack);
@@ -446,6 +616,26 @@ static void _arraylength(Frame *frame)
   stack_ipush(&frame->operands, ary->length);
 }
 
+static void _ifnull(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  void *value = stack_pop(&frame->operands);
+  if (value == NULL) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
+static void _ifnonnull(Frame *frame)
+{
+  u2 branchbyte1 = nextcode(frame);
+  u2 branchbyte2 = nextcode(frame);
+  void *value = stack_pop(&frame->operands);
+  if (value != NULL) {
+    frame->pc += (int16_t)APPEND_8BIT(branchbyte1, branchbyte2) - 3;
+  }
+}
+
 void execute(intptr_t *vmstack)
 {
   Frame *frame = stack_peek(vmstack);
@@ -454,6 +644,9 @@ void execute(intptr_t *vmstack)
     debug(L"pc=%" PRIu32 ", opcode=0x%02x", frame->pc - 1, opcode);
     switch (opcode) {
     case OPCODE_nop:
+      break;
+    case OPCODE_aconsr_null:
+      _aconst_null(frame);
       break;
     case OPCODE_iconst_m1:
       _iconst(frame, -1);
@@ -581,6 +774,48 @@ void execute(intptr_t *vmstack)
     case OPCODE_iinc:
       _iinc(frame);
       break;
+    case OPCODE_ifeq:
+      _ifeq(frame);
+      break;
+    case OPCODE_ifne:
+      _ifne(frame);
+      break;
+    case OPCODE_iflt:
+      _iflt(frame);
+      break;
+    case OPCODE_ifge:
+      _ifge(frame);
+      break;
+    case OPCODE_ifgt:
+      _ifgt(frame);
+      break;
+    case OPCODE_ifle:
+      _ifle(frame);
+      break;
+    case OPCODE_if_icmpeq:
+      _if_icmpeq(frame);
+      break;
+    case OPCODE_if_icmpne:
+      _if_icmpne(frame);
+      break;
+    case OPCODE_if_icmplt:
+      _if_icmplt(frame);
+      break;
+    case OPCODE_if_icmpge:
+      _if_icmpge(frame);
+      break;
+    case OPCODE_if_icmpgt:
+      _if_icmpgt(frame);
+      break;
+    case OPCODE_if_icmple:
+      _if_icmple(frame);
+      break;
+    case OPCODE_if_acmpeq:
+      _if_acmpeq(frame);
+      break;
+    case OPCODE_if_acmpne:
+      _if_acmpne(frame);
+      break;
     case OPCODE_ireturn:
       _ireturn(vmstack);
       return;
@@ -615,6 +850,12 @@ void execute(intptr_t *vmstack)
       break;
     case OPCODE_arraylength:
       _arraylength(frame);
+      break;
+    case OPCODE_ifnull:
+      _ifnull(frame);
+      break;
+    case OPCODE_ifnonnull:
+      _ifnonnull(frame);
       break;
     default:
       error(L"unknown instruction(pc=%" PRIu32 ", opcode=0x%02x)", frame->pc - 1, opcode);
