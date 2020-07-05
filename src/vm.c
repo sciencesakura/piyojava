@@ -8,6 +8,7 @@ typedef struct JObject JObject;
 typedef struct JArray JArray;
 typedef struct JIntArray JIntArray;
 typedef struct JCharArray JCharArray;
+typedef struct JObjectArray JObjectArray;
 
 enum Opcode {
   OPCODE_nop = 0x00,
@@ -34,6 +35,7 @@ enum Opcode {
   OPCODE_aload_2 = 0x2c,
   OPCODE_aload_3 = 0x2d,
   OPCODE_iaload = 0x2e,
+  OPCODE_aaload = 0x32,
   OPCODE_caload = 0x34,
   OPCODE_istore = 0x36,
   OPCODE_astore = 0x3a,
@@ -46,6 +48,7 @@ enum Opcode {
   OPCODE_astore_2 = 0x4d,
   OPCODE_astore_3 = 0x4e,
   OPCODE_iastore = 0x4f,
+  OPCODE_aastore = 0x53,
   OPCODE_castore = 0x55,
   OPCODE_dup = 0x59,
   OPCODE_dup_x1 = 0x5a,
@@ -83,6 +86,7 @@ enum Opcode {
   OPCODE_invokestatic = 0xb8,
   OPCODE_new = 0xbb,
   OPCODE_newarray = 0xbc,
+  OPCODE_anewarray = 0xbd,
   OPCODE_arraylength = 0xbe,
   OPCODE_ifnull = 0xc6,
   OPCODE_ifnonnull = 0xc7,
@@ -116,6 +120,11 @@ struct JIntArray {
 struct JCharArray {
   jint length;
   jchar *values;
+};
+
+struct JObjectArray {
+  jint length;
+  intptr_t *values;
 };
 
 #define BYTECONCATx2(a, b)       (((a) << 8) | (b))
@@ -269,6 +278,13 @@ static void _iaload(Frame *frame)
   stack_ipush(&frame->operands, ary->values[index]);
 }
 
+static void _aaload(Frame *frame)
+{
+  jint index = stack_ipop(&frame->operands);
+  JObjectArray *ary = stack_pop(&frame->operands);
+  stack_ipush(&frame->operands, ary->values[index]);
+}
+
 static void _caload(Frame *frame)
 {
   jint index = stack_ipop(&frame->operands);
@@ -301,6 +317,14 @@ static void _iastore(Frame *frame)
   jint value = stack_ipop(&frame->operands);
   jint index = stack_ipop(&frame->operands);
   JIntArray *ary = stack_pop(&frame->operands);
+  ary->values[index] = value;
+}
+
+static void _aastore(Frame *frame)
+{
+  intptr_t value = stack_ipop(&frame->operands);
+  jint index = stack_ipop(&frame->operands);
+  JObjectArray *ary = stack_pop(&frame->operands);
   ary->values[index] = value;
 }
 
@@ -696,6 +720,17 @@ static void _newarray(Frame *frame)
   stack_push(&frame->operands, ary);
 }
 
+static void _anewarray(Frame *frame)
+{
+  u2 indexbyte1 = nextcode(frame);
+  u2 indexbyte2 = nextcode(frame);
+  jint count = stack_ipop(&frame->operands);
+  JObjectArray *ary = malloc(sizeof(JObjectArray));
+  ary->length = count;
+  ary->values = calloc(count, sizeof(intptr_t));
+  stack_push(&frame->operands, ary);
+}
+
 static void _arraylength(Frame *frame)
 {
   JArray *ary = stack_pop(&frame->operands);
@@ -809,6 +844,9 @@ void execute(intptr_t *vmstack)
     case OPCODE_iaload:
       _iaload(frame);
       break;
+    case OPCODE_aaload:
+      _aaload(frame);
+      break;
     case OPCODE_caload:
       _caload(frame);
       break;
@@ -844,6 +882,9 @@ void execute(intptr_t *vmstack)
       break;
     case OPCODE_iastore:
       _iastore(frame);
+      break;
+    case OPCODE_aastore:
+      _aastore(frame);
       break;
     case OPCODE_castore:
       _castore(frame);
@@ -954,6 +995,9 @@ void execute(intptr_t *vmstack)
       break;
     case OPCODE_newarray:
       _newarray(frame);
+      break;
+    case OPCODE_anewarray:
+      _anewarray(frame);
       break;
     case OPCODE_arraylength:
       _arraylength(frame);

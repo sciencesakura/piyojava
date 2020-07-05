@@ -138,6 +138,14 @@ public class Test {
 
         System.out.println("Hello, world!");
         System.out.println("你好 世界!");
+
+        String[] l = {"Apple", "Pie", "ABC"};
+        System.out.println(l.length);
+        System.out.println(l[0]);
+        System.out.println(l[1]);
+        System.out.println(l[2]);
+        l[1] = "Queen";
+        System.out.println(l[1]);
     }
 
     int i_a;
