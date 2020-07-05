@@ -22,6 +22,7 @@ enum Opcode {
   OPCODE_bipush = 0x10,
   OPCODE_sipush = 0x11,
   OPCODE_ldc = 0x12,
+  OPCODE_ldc_w = 0x13,
   OPCODE_iload = 0x15,
   OPCODE_aload = 0x19,
   OPCODE_iload_0 = 0x1a,
@@ -196,10 +197,9 @@ static void _sipush(Frame *frame)
   stack_ipush(&frame->operands, value);
 }
 
-static void _ldc(intptr_t *vmstack)
+static void ldc(intptr_t *vmstack, u2 index)
 {
   Frame *frame = stack_peek(vmstack);
-  u1 index = nextcode(frame);
   Cp_info *tc = cp(frame->constant_pool, index);
   switch (tc->tag) {
   case CONSTANT_Integer: {
@@ -226,6 +226,20 @@ static void _ldc(intptr_t *vmstack)
   default:
     error(L"ldc tag(%d) not supported", tc->tag);
   }
+}
+
+static void _ldc(intptr_t *vmstack)
+{
+  Frame *frame = stack_peek(vmstack);
+  ldc(vmstack, nextcode(frame));
+}
+
+static void _ldc_w(intptr_t *vmstack)
+{
+  Frame *frame = stack_peek(vmstack);
+  u2 indexbyte1 = nextcode(frame);
+  u2 indexbyte2 = nextcode(frame);
+  ldc(vmstack, BYTECONCATx2(indexbyte1, indexbyte2));
 }
 
 static void _iload_n(Frame *frame, u1 n)
@@ -758,6 +772,9 @@ void execute(intptr_t *vmstack)
       break;
     case OPCODE_ldc:
       _ldc(vmstack);
+      break;
+    case OPCODE_ldc_w:
+      _ldc_w(vmstack);
       break;
     case OPCODE_iload:
       _iload(frame);
