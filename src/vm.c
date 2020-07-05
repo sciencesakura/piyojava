@@ -117,19 +117,40 @@ struct JCharArray {
   jchar *values;
 };
 
-const CONSTANT_NameAndType_info *CLINIT_NAT
-    = &(CONSTANT_NameAndType_info) { CONSTANT_NameAndType,
-                                     0,
-                                     &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 8, (u1 *)"<clinit>" },
-                                     0,
-                                     &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 3, (u1 *)"()V" } };
-
 #define BYTECONCATx2(a, b)       (((a) << 8) | (b))
 #define BYTECONCATx4(a, b, c, d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
 
 static inline u1 nextcode(Frame *frame)
 {
   return frame->code->code[frame->pc++];
+}
+
+static JObject *newobj(intptr_t *vmstack, CONSTANT_Utf8_info *classname)
+{
+  ClassFile *cf = load_class(vmstack, classname);
+  JObject *obj = malloc(sizeof(JObject));
+  hashtable_init(&obj->fields, cf->fields_count * 2, utf8hash, utf8eq);
+  for (u2 i = 0; i < cf->fields_count; i++) {
+    Field_info *fi = &cf->fields[i];
+    if (fi->access_flags & FI_ACC_STATIC)
+      continue;
+    switch (*fi->descriptor->bytes) {
+    case 'B':
+    case 'C':
+    case 'I':
+    case 'J':
+    case 'S':
+    case 'Z':
+      hashtable_iput(&obj->fields, fi->name, 0);
+      break;
+    case 'D':
+    case 'F':
+      error(L"floating point number is unsupported");
+    default:
+      hashtable_put(&obj->fields, fi->name, NULL);
+    }
+  }
+  return obj;
 }
 
 static void java_io_PrintStream_println_C(intptr_t *args)
@@ -142,6 +163,13 @@ static void java_io_PrintStream_println_I(intptr_t *args)
 {
   jint x = args[1];
   wprintf(L"%" PRId32 "\n", x);
+}
+
+static void java_io_PrintStream_println_java_lang_String(intptr_t *args)
+{
+  JObject *string = (JObject *)args[1];
+  JCharArray *value = hashtable_get(&string->fields, &UTF8_LITERAL(5, "value"));
+  wprintf(L"%ls\n", value->values);
 }
 
 static void _aconst_null(Frame *frame)
@@ -168,14 +196,31 @@ static void _sipush(Frame *frame)
   stack_ipush(&frame->operands, value);
 }
 
-static void _ldc(Frame *frame)
+static void _ldc(intptr_t *vmstack)
 {
+  Frame *frame = stack_peek(vmstack);
   u1 index = nextcode(frame);
   Cp_info *tc = cp(frame->constant_pool, index);
   switch (tc->tag) {
   case CONSTANT_Integer: {
     CONSTANT_Integer_info *c = (CONSTANT_Integer_info *)tc;
     stack_ipush(&frame->operands, c->value);
+    break;
+  }
+  case CONSTANT_String: {
+    CONSTANT_String_info *c = (CONSTANT_String_info *)tc;
+    JObject *string = hashtable_get(&stringpool, c->string);
+    if (string == NULL) {
+      string = newobj(vmstack, &UTF8_LITERAL(16, "java/lang/String"));
+      JCharArray *value = malloc(sizeof(JCharArray));
+      value->values = calloc(c->string->length + 1, sizeof(jchar));
+      char tmp[c->string->length + 1];
+      memcpy(tmp, c->string->bytes, c->string->length);
+      tmp[c->string->length] = '\0';
+      value->length = mbstowcs(value->values, tmp, c->string->length);
+      hashtable_put(&string->fields, &UTF8_LITERAL(5, "value"), value);
+    }
+    stack_push(&frame->operands, string);
     break;
   }
   default:
@@ -561,6 +606,9 @@ static void _invokevirtual(intptr_t *vmstack)
         java_io_PrintStream_println_C(variables);
       } else if (utf8has(me->name, 7, "println") && utf8has(me->descriptor, 4, "(I)V")) {
         java_io_PrintStream_println_I(variables);
+      } else if (utf8has(me->name, 7, "println")
+                 && utf8has(me->descriptor, 21, "(Ljava/lang/String;)V")) {
+        java_io_PrintStream_println_java_lang_String(variables);
       }
     }
     return;
@@ -606,30 +654,7 @@ static void _new(intptr_t *vmstack)
   u2 indexbyte2 = nextcode(frame);
   u2 index = BYTECONCATx2(indexbyte1, indexbyte2);
   CONSTANT_Class_info *cinf = cp(frame->constant_pool, index);
-  ClassFile *cf = load_class(vmstack, cinf->name);
-  JObject *obj = malloc(sizeof(JObject));
-  hashtable_init(&obj->fields, cf->fields_count * 2, utf8hash, utf8eq);
-  for (u2 i = 0; i < cf->fields_count; i++) {
-    Field_info *fi = &cf->fields[i];
-    if (fi->access_flags & FI_ACC_STATIC)
-      continue;
-    switch (*fi->descriptor->bytes) {
-    case 'B':
-    case 'C':
-    case 'I':
-    case 'J':
-    case 'S':
-    case 'Z':
-      hashtable_iput(&obj->fields, fi->name, 0);
-      break;
-    case 'D':
-    case 'F':
-      error(L"floating point number is unsupported");
-    default:
-      hashtable_put(&obj->fields, fi->name, NULL);
-    }
-  }
-  stack_push(&frame->operands, obj);
+  stack_push(&frame->operands, newobj(vmstack, cinf->name));
 }
 
 static void _newarray(Frame *frame)
@@ -732,7 +757,7 @@ void execute(intptr_t *vmstack)
       _sipush(frame);
       break;
     case OPCODE_ldc:
-      _ldc(frame);
+      _ldc(vmstack);
       break;
     case OPCODE_iload:
       _iload(frame);
@@ -959,7 +984,7 @@ ClassFile *load_class(intptr_t *vmstack, CONSTANT_Utf8_info *name)
       break;
     }
   }
-  Method_info *clinit = find_method(cf, CLINIT_NAT);
+  Method_info *clinit = find_method(cf, &NAT_LITERAL(8, "<clinit>", 3, "()V"));
   if (clinit == NULL || !(clinit->access_flags & ME_ACC_STATIC))
     return cf;
   Code_attribute *code = code_attr(clinit);

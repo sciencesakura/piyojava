@@ -88,27 +88,21 @@ void log_classfile(ClassFile *cf)
   wprintf(L"attributes=...\n");
 }
 
-const CONSTANT_NameAndType_info *MAIN_NAT = &(CONSTANT_NameAndType_info) {
-  CONSTANT_NameAndType,
-  0,
-  &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 4, (u1 *)"main" },
-  0,
-  &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 22, (u1 *)"([Ljava/lang/String;)V" }
-};
-
 HashTable classes;
+HashTable stringpool;
 
 int main(int argc, char **argv)
 {
+  setlocale(LC_ALL, "");
   if (argc < 2) {
     error(L"piyojava <classfile>");
   }
   intptr_t _vmstack[1024]; // サイズ適当
   intptr_t *vmstack = _vmstack;
   hashtable_init(&classes, 128, utf8hash, utf8eq);
-  ClassFile *cf = load_class(
-      vmstack, &(CONSTANT_Utf8_info) { CONSTANT_Utf8, strlen(argv[1]), (u1 *)argv[1] });
-  Method_info *main = find_method(cf, MAIN_NAT);
+  hashtable_init(&stringpool, 128, utf8hash, utf8eq);
+  ClassFile *cf = load_class(vmstack, &UTF8_LITERAL(strlen(argv[1]), argv[1]));
+  Method_info *main = find_method(cf, &NAT_LITERAL(4, "main", 22, "([Ljava/lang/String;)V"));
   if (main == NULL || !(main->access_flags & ME_ACC_STATIC)) {
     error(L"not found");
   }

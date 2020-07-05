@@ -60,6 +60,13 @@ static void read_constant_pool(u2 count, void ***ptr, FILE *strm)
       read_u2(&c->name_index, strm);
       break;
     }
+    case CONSTANT_String: {
+      CONSTANT_String_info *c = malloc(sizeof(CONSTANT_String_info));
+      (*ptr)[i] = c;
+      c->tag = tag;
+      read_u2(&c->string_index, strm);
+      break;
+    }
     case CONSTANT_Fieldref: {
       CONSTANT_Fieldref_info *c = malloc(sizeof(CONSTANT_Fieldref_info));
       (*ptr)[i] = c;
@@ -94,6 +101,11 @@ static void read_constant_pool(u2 count, void ***ptr, FILE *strm)
     case CONSTANT_Class: {
       CONSTANT_Class_info *c = (CONSTANT_Class_info *)tc;
       c->name = cp(*ptr, c->name_index);
+      break;
+    }
+    case CONSTANT_String: {
+      CONSTANT_String_info *c = (CONSTANT_String_info *)tc;
+      c->string = cp(*ptr, c->string_index);
       break;
     }
     case CONSTANT_Fieldref: {

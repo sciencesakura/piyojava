@@ -3,6 +3,7 @@
 
 #include "util/hashtable.h"
 #include <inttypes.h>
+#include <locale.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -26,7 +27,7 @@ typedef struct CONSTANT_Integer_info CONSTANT_Integer_info;
 // typedef struct CONSTANT_Long_info CONSTANT_Long_info;
 // typedef struct CONSTANT_Double_info CONSTANT_Double_info;
 typedef struct CONSTANT_Class_info CONSTANT_Class_info;
-// typedef struct CONSTANT_String_info CONSTANT_String_info;
+typedef struct CONSTANT_String_info CONSTANT_String_info;
 typedef struct CONSTANT_Fieldref_info CONSTANT_Fieldref_info;
 typedef struct CONSTANT_Methodref_info CONSTANT_Methodref_info;
 // typedef struct CONSTANT_InterfaceMethodref_info CONSTANT_InterfaceMethodref_info;
@@ -96,6 +97,12 @@ struct CONSTANT_Class_info {
   Constant_tag tag;
   u2 name_index;
   CONSTANT_Utf8_info *name;
+};
+
+struct CONSTANT_String_info {
+  Constant_tag tag;
+  u2 string_index;
+  CONSTANT_Utf8_info *string;
 };
 
 struct CONSTANT_Fieldref_info {
@@ -179,6 +186,12 @@ struct Frame {
 #define ME_ACC_NATIVE 0x0100
 
 extern HashTable classes;
+extern HashTable stringpool;
+
+#define UTF8_LITERAL(len, str) ((CONSTANT_Utf8_info) { CONSTANT_Utf8, (len), (u1 *)(str) })
+#define NAT_LITERAL(nmlen, name, delen, desc)                                                      \
+  ((CONSTANT_NameAndType_info) {                                                                   \
+      CONSTANT_NameAndType, 0, &UTF8_LITERAL(nmlen, name), 0, &UTF8_LITERAL(delen, desc) })
 
 void debug(const wchar_t *message, ...);
 
