@@ -4,7 +4,7 @@ A toy JVM implementation by C.
 
 ## Requirements 🥚
 
-__piyojava__ works in macOS system now.
+__piyojava__ works in macOS or Ubuntu system now.
 
 * GNU Make
 
