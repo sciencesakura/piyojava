@@ -129,9 +129,11 @@ noreturn void error(const wchar_t *message, ...)
 
 void debug(const wchar_t *message, ...)
 {
+#ifdef DEBUG
   va_list params;
   va_start(params, message);
   fwprintf(stderr, L"DEBUG: ");
   vfwprintf(stderr, message, params);
   fwprintf(stderr, L"\n");
+#endif
 }

@@ -1,4 +1,5 @@
 CFLAGS := -std=c11 -g -I src/
+# CFLAGS := -std=c11 -g -I src/ -DDEBUG
 SRCS := $(shell find src/ -type f -name '*.c')
 HEAD := $(shell find src/ -type f -name '*.h')
 OBJS := $(SRCS:.c=.o)
@@ -18,7 +19,7 @@ expected: $(JCLAS)
 	java Test > expected
 
 clean:
-	$(RM) piyojava $(OBJS) $(JCALS) expected
+	$(RM) piyojava $(OBJS) $(JCLAS) actual expected *.log
 
 $(OBJS): $(HEAD)
 
