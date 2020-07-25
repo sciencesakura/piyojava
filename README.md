@@ -2,6 +2,8 @@
 
 A toy JVM implementation by C.
 
+![](https://github.com/sciencesakura/piyojava/workflows/build/badge.svg)
+
 ## Requirements 🥚
 
 __piyojava__ works in macOS or Ubuntu system now.
