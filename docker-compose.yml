@@ -1,7 +1,0 @@
-version: '3.8'
-services:
-  ubuntu:
-    build: ./docker
-    image: piyojava/ubuntu
-    volumes:
-      - .:/piyojava
