@@ -188,10 +188,10 @@ struct Frame {
 extern HashTable classes;
 extern HashTable stringpool;
 
-#define UTF8_LITERAL(len, str) ((CONSTANT_Utf8_info) { CONSTANT_Utf8, (len), (u1 *)(str) })
-#define NAT_LITERAL(nmlen, name, delen, desc)                                                      \
+#define UTF8_LITERAL(s) ((CONSTANT_Utf8_info) { CONSTANT_Utf8, strlen(s), (u1 *)(s) })
+#define NAT_LITERAL(name, desc)                                                                    \
   ((CONSTANT_NameAndType_info) {                                                                   \
-      CONSTANT_NameAndType, 0, &UTF8_LITERAL(nmlen, name), 0, &UTF8_LITERAL(delen, desc) })
+      CONSTANT_NameAndType, 0, &UTF8_LITERAL(name), 0, &UTF8_LITERAL(desc) })
 
 void debug(const wchar_t *message, ...);
 

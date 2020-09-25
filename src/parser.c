@@ -1,6 +1,6 @@
 #include "piyojava.h"
 
-const CONSTANT_Utf8_info *Code = &(CONSTANT_Utf8_info) { CONSTANT_Utf8, 4, (u1 *)"Code" };
+const CONSTANT_Utf8_info *Code = &UTF8_LITERAL("Code");
 
 static void read_attributes(u2 count, void ***ptr, void **constant_pool, FILE *strm);
 
@@ -132,14 +132,18 @@ static void read_constant_pool(u2 count, void ***ptr, FILE *strm)
   }
 }
 
-static void read_interfaces(u2 count, CONSTANT_Class_info ***ptr, FILE *strm)
+static void read_interfaces(u2 count, CONSTANT_Class_info ***ptr, void **constant_pool, FILE *strm)
 {
   if (count == 0) {
     *ptr = NULL;
     return;
   }
-  // TODO
-  error(L"interface is unsupported");
+  *ptr = calloc(count, sizeof(CONSTANT_Class_info *));
+  for (u2 i = 0; i < count; i++) {
+    u2 inf;
+    read_u2(&inf, strm);
+    (*ptr)[i] = cp(constant_pool, inf);
+  }
 }
 
 static void read_code_attribute(void **ptr, CONSTANT_Utf8_info *attribute_name,
@@ -281,7 +285,7 @@ ClassFile *parse_class(size_t length, const void *name)
   read_u2(&super_class, strm);
   cf->super_class = cp(cf->constant_pool, super_class);
   read_u2(&cf->interfaces_count, strm);
-  read_interfaces(cf->interfaces_count, &cf->interfaces, strm);
+  read_interfaces(cf->interfaces_count, &cf->interfaces, cf->constant_pool, strm);
   read_u2(&cf->fields_count, strm);
   read_fields(cf->fields_count, &cf->fields, cf->constant_pool, strm);
   read_u2(&cf->methods_count, strm);

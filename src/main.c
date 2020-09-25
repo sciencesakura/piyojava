@@ -14,8 +14,8 @@ int main(int argc, char **argv)
   intptr_t *vmstack = _vmstack;
   hashtable_init(&classes, 128, utf8hash, utf8eq);
   hashtable_init(&stringpool, 128, utf8hash, utf8eq);
-  ClassFile *cf = load_class(vmstack, &UTF8_LITERAL(strlen(argv[1]), argv[1]));
-  Method_info *main = find_method(cf, &NAT_LITERAL(4, "main", 22, "([Ljava/lang/String;)V"));
+  ClassFile *cf = load_class(vmstack, &UTF8_LITERAL(argv[1]));
+  Method_info *main = find_method(cf, &NAT_LITERAL("main", "([Ljava/lang/String;)V"));
   if (main == NULL || !(main->access_flags & ME_ACC_STATIC)) {
     error(L"not found");
   }

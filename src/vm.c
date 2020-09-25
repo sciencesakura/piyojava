@@ -178,7 +178,7 @@ static void java_io_PrintStream_println_I(intptr_t *args)
 static void java_io_PrintStream_println_java_lang_String(intptr_t *args)
 {
   JObject *string = (JObject *)args[1];
-  JCharArray *value = hashtable_get(&string->fields, &UTF8_LITERAL(5, "value"));
+  JCharArray *value = hashtable_get(&string->fields, &UTF8_LITERAL("value"));
   wprintf(L"%ls\n", value->values);
 }
 
@@ -220,14 +220,14 @@ static void ldc(intptr_t *vmstack, u2 index)
     CONSTANT_String_info *c = (CONSTANT_String_info *)tc;
     JObject *string = hashtable_get(&stringpool, c->string);
     if (string == NULL) {
-      string = newobj(vmstack, &UTF8_LITERAL(16, "java/lang/String"));
+      string = newobj(vmstack, &UTF8_LITERAL("java/lang/String"));
       JCharArray *value = malloc(sizeof(JCharArray));
       value->values = calloc(c->string->length + 1, sizeof(jchar));
       char tmp[c->string->length + 1];
       memcpy(tmp, c->string->bytes, c->string->length);
       tmp[c->string->length] = '\0';
       value->length = mbstowcs(value->values, tmp, c->string->length);
-      hashtable_put(&string->fields, &UTF8_LITERAL(5, "value"), value);
+      hashtable_put(&string->fields, &UTF8_LITERAL("value"), value);
     }
     stack_push(&frame->operands, string);
     break;
@@ -1045,7 +1045,7 @@ ClassFile *load_class(intptr_t *vmstack, CONSTANT_Utf8_info *name)
       break;
     }
   }
-  Method_info *clinit = find_method(cf, &NAT_LITERAL(8, "<clinit>", 3, "()V"));
+  Method_info *clinit = find_method(cf, &NAT_LITERAL("<clinit>", "()V"));
   if (clinit == NULL || !(clinit->access_flags & ME_ACC_STATIC))
     return cf;
   Code_attribute *code = code_attr(clinit);

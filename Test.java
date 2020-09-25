@@ -1,4 +1,4 @@
-public class Test {
+public class Test implements Runnable {
 
     static int s_a;
 
@@ -146,6 +146,7 @@ public class Test {
         System.out.println(l[2]);
         l[1] = "Queen";
         System.out.println(l[1]);
+        test.run();
     }
 
     int i_a;
@@ -164,5 +165,9 @@ public class Test {
 
     int i_add(int a, int b) {
         return a + b;
+    }
+
+    public void run() {
+        System.out.println("run");
     }
 }
