@@ -771,7 +771,7 @@ void execute(intptr_t *vmstack)
   Frame *frame = stack_peek(vmstack);
   while (frame->pc < frame->code->code_length) {
     Opcode opcode = nextcode(frame);
-    debug(L"pc=%" PRIu32 ", opcode=0x%02x", frame->pc - 1, opcode);
+    log_debug(L"pc=%" PRIu32 ", opcode=0x%02x", frame->pc - 1, opcode);
     switch (opcode) {
     case OPCODE_nop:
       break;

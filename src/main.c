@@ -25,28 +25,7 @@ int main(int argc, char **argv)
   stack_push(&vmstack, &(Frame) { 0, code, variables, operands, cf->constant_pool });
   execute(vmstack);
   for (u2 i = 0; i < code->max_locals; i++) {
-    debug(L"locals[%" PRIu16 "]=%" PRIdPTR, i, variables[i]);
+    log_debug(L"locals[%" PRIu16 "]=%" PRIdPTR, i, variables[i]);
   }
   return EXIT_SUCCESS;
-}
-
-noreturn void error(const wchar_t *message, ...)
-{
-  va_list params;
-  va_start(params, message);
-  fwprintf(stderr, L"ERROR: ");
-  vfwprintf(stderr, message, params);
-  fwprintf(stderr, L"\n");
-  abort();
-}
-
-void debug(const wchar_t *message, ...)
-{
-#ifdef DEBUG
-  va_list params;
-  va_start(params, message);
-  fwprintf(stderr, L"DEBUG: ");
-  vfwprintf(stderr, message, params);
-  fwprintf(stderr, L"\n");
-#endif
 }

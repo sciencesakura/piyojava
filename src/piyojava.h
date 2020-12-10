@@ -1,6 +1,7 @@
 #ifndef PIYOJAVA_H
 #define PIYOJAVA_H
 
+#include "util/common.h"
 #include "util/hashtable.h"
 #include <inttypes.h>
 #include <locale.h>
@@ -9,7 +10,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdnoreturn.h>
 #include <string.h>
 #include <wchar.h>
 
@@ -192,10 +192,6 @@ extern HashTable stringpool;
 #define NAT_LITERAL(name, desc)                                                                    \
   ((CONSTANT_NameAndType_info) {                                                                   \
       CONSTANT_NameAndType, 0, &UTF8_LITERAL(name), 0, &UTF8_LITERAL(desc) })
-
-void debug(const wchar_t *message, ...);
-
-noreturn void error(const wchar_t *message, ...);
 
 ClassFile *load_class(intptr_t *vmstack, CONSTANT_Utf8_info *name);
 
